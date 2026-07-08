@@ -1,0 +1,50 @@
+/*
+  Milestone 1 placeholder styling only.
+  This is not the final Apple-inspired visual design (see PROJECT_CONTEXT.md
+  section 25). Final styling is addressed in a later milestone.
+*/
+
+body {
+  font-family: system-ui, -apple-system, sans-serif;
+  max-width: 600px;
+  margin: 40px auto;
+  padding: 0 16px;
+  color: #1d1d1f;
+}
+
+#connection-check {
+  margin-top: 24px;
+  padding: 16px;
+  border: 1px solid #d0d0d5;
+  border-radius: 8px;
+}
+
+#status-text[data-state="idle"] {
+  color: #6e6e73;
+}
+
+#status-text[data-state="checking"] {
+  color: #6e6e73;
+}
+
+#status-text[data-state="connected"] {
+  color: #1a7f37;
+  font-weight: 600;
+}
+
+#status-text[data-state="error"] {
+  color: #c0392b;
+  font-weight: 600;
+}
+
+button {
+  margin-top: 12px;
+  padding: 8px 16px;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+button:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
