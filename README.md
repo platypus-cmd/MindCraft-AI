@@ -1,18 +1,40 @@
-# MindCraft AI — Milestone 1: Foundation
+# MindCraft AI - Milestone 2: Notes Vertical Slice
 
-This README currently covers **local development setup only**, for Milestone 1
-(backend skeleton, frontend skeleton, and health-check connectivity).
-Deployment instructions will be added in a later milestone once deployment is
-actually implemented.
+MindCraft AI is a personalized AI study companion for college students. This
+milestone implements the first complete notes workflow:
+
+```text
+Paste study material
+-> choose learning preferences
+-> generate structured notes with Gemini
+-> validate the AI response
+-> calculate reading time locally
+-> safely render notes in the frontend
+```
 
 See `docs/PROJECT_CONTEXT.md` for the full product and engineering spec.
 
+## Current Functionality
+
+- FastAPI backend with `GET /api/v1/health`.
+- `POST /api/v1/notes/generate` for AI-powered personalized notes.
+- Dynamic prompt composition for learning goal, knowledge level, note length,
+  and output format.
+- Structured Gemini response validation with Pydantic.
+- Deterministic reading-time calculation in backend code.
+- Plain HTML/CSS/JavaScript frontend with safe DOM rendering.
+
+Not included yet: PDF upload, flashcards, quizzes, revision, retests, copy
+notes, PDF export, database, authentication, AWS deployment, or final visual
+design.
+
 ## Prerequisites
 
-* Python 3.10+ installed and available on PATH (`python --version`).
-* No Node.js or other runtime is required — the frontend is plain HTML/CSS/JS.
+- Python 3.10+ installed and available on PATH (`python --version`).
+- No Node.js or frontend framework is required.
+- A Gemini API key from Google AI Studio for real notes generation.
 
-All commands below are written for **Windows PowerShell**.
+All commands below are written for Windows PowerShell.
 
 ## 1. Backend Setup
 
@@ -20,8 +42,8 @@ From the repository root:
 
 ```powershell
 cd backend
-python -m venv venv
-.\venv\Scripts\Activate.ps1
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
 pip install -r requirements.txt
 ```
 
@@ -31,9 +53,9 @@ If PowerShell blocks the activation script with an execution policy error, run:
 Set-ExecutionPolicy -Scope Process -ExecutionPolicy RemoteSigned
 ```
 
-and then re-run the activation command.
+Then re-run the activation command.
 
-## 2. Create Your Local Environment File
+## 2. Configure Environment Variables
 
 Copy the example file:
 
@@ -41,14 +63,24 @@ Copy the example file:
 Copy-Item .env.example .env
 ```
 
-`backend/.env` is loaded automatically by the application's settings
-(`app/core/config.py`) and is listed in `.gitignore`, so it will never be
-committed. Edit the values inside `.env` if your setup differs from the
-defaults (for example, if you serve the frontend on a different port).
+Edit only your local `backend/.env` file. Do not commit it.
 
-Gemini-related environment variables are intentionally **not** part of this
-file yet — they will be added when Gemini integration begins in a later
-milestone.
+Required for notes generation:
+
+```text
+GEMINI_API_KEY=your_real_key_here
+```
+
+Optional Gemini settings:
+
+```text
+GEMINI_MODEL=gemini-2.5-flash
+GEMINI_TIMEOUT_SECONDS=30
+```
+
+`GET /api/v1/health` works even when `GEMINI_API_KEY` is not configured. Notes
+generation requires the key and will fail with a sanitized server error without
+it.
 
 ## 3. Start the Backend
 
@@ -60,9 +92,7 @@ uvicorn app.main:app --reload
 
 The API will be available at `http://127.0.0.1:8000`.
 
-### Test the Health Endpoint Directly
-
-In a browser, or a second PowerShell window:
+Health check:
 
 ```powershell
 curl http://127.0.0.1:8000/api/v1/health
@@ -78,52 +108,47 @@ Expected response shape:
 }
 ```
 
-You can also open `http://127.0.0.1:8000/docs` in a browser for the
-interactive FastAPI docs.
-
 ## 4. Serve the Frontend
 
-Open a **new** PowerShell window (keep the backend running in the first one).
-From the repository root:
+Open a new PowerShell window. From the repository root:
 
 ```powershell
 python -m http.server 5500 --directory frontend
 ```
 
-This is the default method for this milestone. It serves `frontend/index.html`
-at `http://127.0.0.1:5500`.
+Open `http://127.0.0.1:5500` in a browser.
 
-**Optional alternative:** if you use VS Code, the "Live Server" extension can
-also serve the `frontend/` folder. If you use a different port with either
-method, update `FRONTEND_ORIGIN` in `backend/.env` to match, then restart the
-backend.
+If you serve the frontend from a different origin, update `FRONTEND_ORIGIN` in
+`backend/.env`, then restart the backend.
 
-## 5. Verify Frontend-to-Backend Communication
+## 5. Run Tests
 
-1. With both servers running, open `http://127.0.0.1:5500` in a browser.
-2. Click **"Check Backend Connection."**
-3. The status text should change to a connected message showing the app name,
-   API version, and status returned by the backend.
-4. To confirm the error state works, stop the backend (`Ctrl+C` in its
-   terminal) and click the button again — the page should show a
-   "could not reach the backend" message rather than crashing silently.
+From the `backend/` directory with the virtual environment active:
 
-## Verification Checklist
+```powershell
+python -m unittest discover
+```
 
-Run through this manually and confirm each item yourself — do not assume any
-item passes without running it:
+The tests cover notes prompt personalization and backend request validation.
+They do not call the real Gemini API.
 
-* [ ] `pip install -r requirements.txt` completes without errors.
-* [ ] `uvicorn app.main:app --reload` starts without errors.
-* [ ] `GET http://127.0.0.1:8000/api/v1/health` returns the expected JSON.
-* [ ] `python -m http.server 5500 --directory frontend` serves the page at
-      `http://127.0.0.1:5500`.
-* [ ] Clicking "Check Backend Connection" shows a connected message while the
-      backend is running.
-* [ ] Stopping the backend and clicking the button again shows an error
-      message instead of a silent failure or crash.
+## 6. Manual Notes Verification
 
-## Repository Structure (Milestone 1)
+After adding your real `GEMINI_API_KEY` to `backend/.env`:
+
+1. Start the backend.
+2. Serve the frontend.
+3. Open `http://127.0.0.1:5500`.
+4. Click `Check Backend Connection` and confirm the health message appears.
+5. Paste at least 50 characters of study material.
+6. Select one option each for Learning Goal, Knowledge Level, Note Length, and
+   Output Format.
+7. Click `Generate Notes`.
+8. Confirm readable structured notes appear with estimated reading time.
+9. Try different preference combinations and confirm the generated notes change
+   meaningfully.
+
+## Repository Structure
 
 ```text
 MindCraft-AI/
@@ -133,12 +158,25 @@ MindCraft-AI/
 |   |   |-- api/
 |   |   |   |-- v1/
 |   |   |   |   |-- health.py
+|   |   |   |   |-- notes.py
 |   |   |
 |   |   |-- core/
 |   |   |   |-- config.py
 |   |   |
+|   |   |-- prompts/
+|   |   |   |-- notes.py
+|   |   |
+|   |   |-- schemas/
+|   |   |   |-- notes.py
+|   |   |
+|   |   |-- services/
+|   |   |   |-- gemini_errors.py
+|   |   |   |-- gemini_service.py
+|   |   |   |-- notes_service.py
+|   |   |
 |   |   |-- main.py
 |   |
+|   |-- tests/
 |   |-- requirements.txt
 |   |-- .env.example
 |

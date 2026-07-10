@@ -3,18 +3,85 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>MindCraft AI — Dev Foundation</title>
+  <title>MindCraft AI - Notes Vertical Slice</title>
   <link rel="stylesheet" href="css/style.css" />
 </head>
 <body>
   <main>
     <h1>MindCraft AI</h1>
-    <p>This is the Milestone 1 development foundation page. It is not the final MindCraft AI interface.</p>
+    <p>Paste study material, choose how you want to learn, and generate personalized notes.</p>
 
     <section id="connection-check">
       <h2>Backend Connection</h2>
       <p id="status-text" data-state="idle">Not checked yet.</p>
       <button id="check-connection-btn" type="button">Check Backend Connection</button>
+    </section>
+
+    <section id="notes-workspace" aria-labelledby="notes-heading">
+      <h2 id="notes-heading">Generate Notes</h2>
+
+      <form id="notes-form">
+        <label for="source-text">Source material</label>
+        <textarea
+          id="source-text"
+          name="source_text"
+          rows="12"
+          minlength="50"
+          maxlength="20000"
+          placeholder="Paste at least 50 characters of study material here."
+          required
+        ></textarea>
+        <p id="source-help">50 to 20,000 characters after trimming.</p>
+
+        <div class="controls-grid">
+          <label>
+            Learning Goal
+            <select id="learning-goal" name="learning_goal">
+              <option value="academic">Academic</option>
+              <option value="exam_revision">Exam Revision</option>
+              <option value="deep_understanding">Deep Understanding</option>
+              <option value="explain_simply">Explain Simply</option>
+            </select>
+          </label>
+
+          <label>
+            Knowledge Level
+            <select id="knowledge-level" name="knowledge_level">
+              <option value="beginner">Beginner</option>
+              <option value="intermediate" selected>Intermediate</option>
+              <option value="advanced">Advanced</option>
+            </select>
+          </label>
+
+          <label>
+            Note Length
+            <select id="note-length" name="note_length">
+              <option value="quick_review">Quick Review</option>
+              <option value="standard" selected>Standard</option>
+              <option value="comprehensive">Comprehensive</option>
+            </select>
+          </label>
+
+          <label>
+            Output Format
+            <select id="output-format" name="output_format">
+              <option value="structured_paragraphs" selected>Structured Paragraphs</option>
+              <option value="bullet_points">Bullet Points</option>
+              <option value="cornell_notes">Cornell Notes</option>
+              <option value="outline">Outline</option>
+            </select>
+          </label>
+        </div>
+
+        <p id="notes-message" data-state="idle"></p>
+        <button id="generate-notes-btn" type="submit">Generate Notes</button>
+      </form>
+    </section>
+
+    <section id="notes-output" aria-labelledby="notes-output-heading" hidden>
+      <h2 id="notes-output-heading">Generated Notes</h2>
+      <div id="notes-meta"></div>
+      <article id="notes-content"></article>
     </section>
   </main>
 

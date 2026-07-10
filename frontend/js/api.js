@@ -24,3 +24,21 @@ async function checkBackendHealth() {
 
   return response.json();
 }
+
+async function generateNotes(payload) {
+  const response = await fetch(`${API_BASE_URL}/api/v1/notes/generate`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(payload),
+  });
+
+  const data = await response.json().catch(() => ({}));
+
+  if (!response.ok) {
+    throw new Error(data.detail || "Notes generation failed.");
+  }
+
+  return data;
+}

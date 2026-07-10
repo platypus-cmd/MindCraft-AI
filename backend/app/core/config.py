@@ -3,11 +3,6 @@ Application configuration.
 
 Settings are loaded from environment variables, with a local `.env` file
 (not committed to Git) used for local development overrides.
-
-Milestone 1 scope only: application identity, environment name, and the
-allowed frontend origin for CORS. Gemini-related settings will be added
-when Gemini integration begins (a later milestone), per PROJECT_CONTEXT.md
-section 24 and the Milestone 1 task instructions.
 """
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -25,6 +20,12 @@ class Settings(BaseSettings):
     # Default matches the built-in static server documented in the README:
     #   python -m http.server 5500 --directory frontend
     frontend_origin: str = "http://127.0.0.1:5500"
+
+    # Gemini settings. The API key is optional at startup so /health keeps
+    # working in local environments before notes generation is configured.
+    gemini_api_key: str | None = None
+    gemini_model: str = "gemini-2.5-flash"
+    gemini_timeout_seconds: float = 30.0
 
     model_config = SettingsConfigDict(
         env_file=".env",
