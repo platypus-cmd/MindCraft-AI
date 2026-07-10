@@ -1,4 +1,4 @@
-# MindCraft AI — Project Context
+# MindCraft AI â€” Project Context
 
 ## 1. Document Purpose
 
@@ -32,7 +32,7 @@ MindCraft AI is not intended to be a generic chatbot, document summarizer, or co
 
 The product is built around one focused learning loop:
 
-**Understand → Study → Test → Identify Weaknesses → Revise → Retest**
+**Understand â†’ Study â†’ Test â†’ Identify Weaknesses â†’ Revise â†’ Retest**
 
 ---
 
@@ -151,7 +151,7 @@ This reduces unnecessary latency and API usage.
 
 All core features must support:
 
-**Understand → Study → Test → Identify Weaknesses → Revise → Retest**
+**Understand â†’ Study â†’ Test â†’ Identify Weaknesses â†’ Revise â†’ Retest**
 
 ## 6.5 Build the Simplest Architecture That Correctly Solves the Problem
 
@@ -1298,7 +1298,7 @@ MindCraft AI must be built vertically in small working increments.
 
 Recommended order:
 
-## Milestone 1 — Foundation
+## Milestone 1 â€” Foundation
 
 * Repository setup.
 * Backend skeleton.
@@ -1307,7 +1307,7 @@ Recommended order:
 * Health endpoint.
 * Local frontend-backend communication.
 
-## Milestone 2 — Notes Vertical Slice
+## Milestone 2 â€” Notes Vertical Slice
 
 * Text input.
 * Learning preference controls.
@@ -1319,25 +1319,25 @@ Recommended order:
 
 At the end of this milestone, the application must already perform one complete useful workflow.
 
-## Milestone 3 — PDF Input
+## Milestone 3 â€” PDF Input
 
 * PDF validation.
 * Text extraction.
 * Extracted content to note generation.
 
-## Milestone 4 — Notes Utilities
+## Milestone 4 â€” Notes Utilities
 
 * Reading time.
 * Copy notes.
 * PDF export.
 
-## Milestone 5 — Flashcards
+## Milestone 5 â€” Flashcards
 
 * Structured flashcard generation.
 * Validation.
 * Interactive flashcard UI.
 
-## Milestone 6 — Quiz
+## Milestone 6 â€” Quiz
 
 * Quiz configuration.
 * Structured quiz generation.
@@ -1346,14 +1346,14 @@ At the end of this milestone, the application must already perform one complete 
 * Answer review.
 * Weak concept extraction.
 
-## Milestone 7 — Adaptive Revision
+## Milestone 7 â€” Adaptive Revision
 
 * Focused revision generation.
 * Weak-topic learning UI.
 * Retest generation.
 * Retest interaction.
 
-## Milestone 8 — Polish
+## Milestone 8 â€” Polish
 
 * Responsive design.
 * Accessibility review.
@@ -1362,14 +1362,14 @@ At the end of this milestone, the application must already perform one complete 
 * Performance improvements.
 * UI consistency.
 
-## Milestone 9 — Deployment
+## Milestone 9 â€” Deployment
 
 * AWS Elastic Beanstalk configuration.
 * Production environment variables.
 * Deployment.
 * Live application testing.
 
-## Milestone 10 — Documentation
+## Milestone 10 â€” Documentation
 
 * README.
 * Architecture explanation.
@@ -1483,3 +1483,321 @@ The final application must be:
 * Strong enough to discuss honestly in an AI/ML internship interview.
 
 This document defines the frozen product and engineering scope for MindCraft AI v1.0.
+
+
+
+# 38. Current Implementation Status
+
+This section records the verified implementation state of MindCraft AI.
+
+It supplements the frozen Version 1 product and engineering scope defined above.
+
+If the implementation status recorded here differs from an earlier milestone plan, this section describes the actual completed implementation state.
+
+## 38.1 Milestone 1 â€” Foundation
+
+**Status: Complete**
+
+Completed functionality:
+
+* Repository structure established.
+* FastAPI backend skeleton implemented.
+* Plain HTML, CSS, and JavaScript frontend skeleton implemented.
+* Centralized environment configuration implemented.
+* Versioned `/api/v1` routing established.
+* `GET /api/v1/health` implemented.
+* CORS configured through centralized settings.
+* Frontend-to-backend health check implemented.
+* Local frontend and backend communication verified.
+
+Verification:
+
+* Application imports successfully.
+* Health endpoint returns the expected structured response.
+* Frontend can communicate with the backend locally.
+
+Git commit:
+
+`12d1d63 milestone 1 completed`
+
+## 38.2 Milestone 2 â€” AI-Powered Personalized Notes Vertical Slice
+
+**Status: Complete**
+
+Milestone 2 implements the first complete AI-powered workflow in MindCraft AI:
+
+**Source Text â†’ Learning Preferences â†’ Dynamic Prompt â†’ Gemini â†’ Validated Structured Notes â†’ Deterministic Reading Time â†’ Frontend Rendering**
+
+Completed functionality:
+
+* User can enter source text.
+* User can select a learning goal.
+* User can select a knowledge level.
+* User can select a note length.
+* User can select an output format.
+* Frontend sends note-generation requests to `POST /api/v1/notes/generate`.
+* Backend validates request data using Pydantic.
+* Source text is trimmed before use.
+* Source text length limits are enforced by the backend.
+* Allowed learning preference values are enforced using enums.
+* Notes prompts are dynamically composed from all four personalization settings.
+* Prompt construction is separated from Gemini SDK communication.
+* Source material is enclosed in explicit delimiters.
+* Prompts contain grounding and factuality rules.
+* Prompts contain prompt-injection defenses.
+* Prompts explicitly instruct Gemini not to expand into unsupported adjacent topics, concepts, terminology, facts, examples, or textbook material.
+* Exam Revision instructions were strengthened to emphasize likely-tested distinctions and common misconceptions when supported by the source material.
+* Advanced instructions were strengthened to emphasize assumptions, limitations, and tradeoffs when supported by the source material.
+* Gemini integration uses the official `google-genai` Python SDK.
+* The Gemini model is centrally configurable through `GEMINI_MODEL`.
+* The default pinned model is `gemini-2.5-flash`.
+* Gemini client initialization is lazy.
+* The health endpoint continues to function without Gemini API configuration.
+* Gemini generation uses the asynchronous SDK interface.
+* Gemini requests are timeout-controlled.
+* Gemini structured output is validated using Pydantic schemas.
+* Invalid or missing parsed Gemini responses are handled safely.
+* Estimated reading time is calculated deterministically by backend application logic.
+* Reading time does not require an additional Gemini API call.
+* API responses return generated notes, estimated reading time, and `config_used`.
+* Frontend safely renders structured generated notes.
+* Existing Milestone 1 behavior remains functional.
+
+## 38.3 Milestone 2 Architecture
+
+Milestone 2 added the following backend files:
+
+```text
+backend/app/api/v1/notes.py
+
+backend/app/prompts/__init__.py
+backend/app/prompts/notes.py
+
+backend/app/schemas/__init__.py
+backend/app/schemas/notes.py
+
+backend/app/services/__init__.py
+backend/app/services/gemini_errors.py
+backend/app/services/gemini_service.py
+backend/app/services/notes_service.py
+
+backend/tests/__init__.py
+backend/tests/test_notes_endpoint.py
+backend/tests/test_notes_prompt.py
+backend/tests/test_notes_schema_validation.py
+````
+
+The following existing files were modified:
+
+```text
+README.md
+
+backend/.env.example
+backend/app/api/v1/__init__.py
+backend/app/core/config.py
+backend/requirements.txt
+
+frontend/css/style.css
+frontend/index.html
+frontend/js/api.js
+frontend/js/main.js
+```
+
+Current notes-generation request flow:
+
+```text
+Frontend
+    |
+    v
+POST /api/v1/notes/generate
+    |
+    v
+Pydantic Request Validation
+    |
+    v
+Thin API Route
+    |
+    v
+Notes Service
+    |
+    +--> Dynamic Notes Prompt Builder
+    |
+    +--> Gemini Service
+              |
+              v
+       Google Gemini API
+              |
+              v
+       Structured Pydantic Output
+    |
+    v
+Deterministic Reading-Time Calculation
+    |
+    v
+Validated Notes Response
+    |
+    v
+Safe Frontend Rendering
+```
+
+Architectural decisions established during Milestone 2:
+
+* API routes remain thin.
+* Orchestration logic belongs in services.
+* Gemini SDK interaction belongs in the Gemini service.
+* Prompt construction remains separate from Gemini communication.
+* Deterministic calculations remain outside Gemini.
+* Configuration remains centralized.
+* API routes remain versioned under `/api/v1`.
+* Gemini client initialization remains lazy.
+* The application remains stateless.
+* No database has been introduced.
+* No authentication has been introduced.
+* No frontend framework has been introduced.
+* No unnecessary controller, repository, or dependency-injection layers have been added.
+
+## 38.4 Gemini Error Handling and Logging
+
+Milestone 2 defines four explicit Gemini service error types:
+
+* `GeminiConfigurationError`
+* `GeminiTimeoutError`
+* `GeminiUpstreamError`
+* `GeminiInvalidResponseError`
+
+The API route maps these errors to sanitized HTTP responses:
+
+* `GeminiConfigurationError` â†’ HTTP 500.
+* `GeminiTimeoutError` â†’ HTTP 504.
+* `GeminiUpstreamError` â†’ HTTP 502.
+* `GeminiInvalidResponseError` â†’ HTTP 502.
+
+Gemini SDK API errors are caught specifically rather than through a blanket `Exception` handler.
+
+Unexpected programming exceptions are not mislabeled as Gemini upstream failures.
+
+Backend logging is sanitized.
+
+The application must not log:
+
+* Gemini API keys.
+* User source text.
+* Full prompts.
+* Raw Gemini responses.
+* SDK error messages or details that may contain user-provided content.
+
+Client responses must not expose stack traces, raw SDK errors, prompts, source material, API keys, or internal configuration details.
+
+## 38.5 Milestone 2 Testing and Verification
+
+**Automated test result: 24 tests passing.**
+
+Automated tests cover:
+
+* Source-text request validation.
+* Source-text trimming.
+* Minimum and maximum source-text limits.
+* Allowed enum values.
+* Distinct prompt instructions for learning goals.
+* Distinct prompt instructions for knowledge levels.
+* Distinct prompt instructions for note lengths.
+* Distinct prompt instructions for output formats.
+* Behavioral verification that changing each personalization setting changes the built prompt and selects the correct instruction.
+* Source-material delimiters.
+* Grounding and factuality instructions.
+* Prompt-injection defenses.
+* No-topic-expansion grounding rule.
+* Gemini exception-to-HTTP status mappings.
+* Sanitized client-facing error responses.
+
+Additional verification completed:
+
+* Application import succeeds.
+* `google-genai` imports successfully in the project virtual environment.
+* `GET /api/v1/health` succeeds.
+* The health endpoint works independently of Gemini API configuration.
+* A real Gemini notes-generation request succeeds end-to-end.
+* The real request used:
+
+  * Learning Goal: Exam Revision.
+  * Knowledge Level: Advanced.
+  * Note Length: Comprehensive.
+  * Output Format: Structured Paragraphs.
+* The real Gemini response passed structured-output validation.
+* Reading time was calculated by backend application logic.
+* The generated output showed stronger personalization.
+* The strengthened grounding rules materially reduced unsupported adjacent-topic expansion.
+* The frontend successfully generates and renders notes.
+* Git whitespace checks passed before the Milestone 2 commit.
+* The repository working tree was clean after the Milestone 2 commit.
+
+Git commit:
+
+`8868ecb milestone 2 completed`
+
+## 38.6 Known Grounding Limitation
+
+Prompt-only grounding materially reduced unsupported topic expansion but cannot guarantee perfect source faithfulness.
+
+Gemini may still produce reasonable clarifications, inferred educational phrasing, memory tricks, common-mistake descriptions, or minor elaborations beyond the literal wording of the source material.
+
+Do not endlessly tighten prompt wording in an attempt to guarantee perfect grounding.
+
+If stricter source faithfulness becomes necessary, introduce a more robust grounding, evidence, or citation strategy appropriate to the application's requirements.
+
+Any such change must preserve the simple Version 1 architecture unless a genuine implementation need justifies additional complexity.
+
+## 38.7 Milestone Plan Status
+
+Current milestone status:
+
+* Milestone 1 â€” Foundation: **Complete**
+* Milestone 2 â€” Notes Vertical Slice: **Complete**
+* Milestone 3 â€” PDF Input: **Not Started**
+* Milestone 4 â€” Notes Utilities: **Not Started, with reading time completed early during Milestone 2**
+* Milestone 5 â€” Flashcards: **Not Started**
+* Milestone 6 â€” Quiz: **Not Started**
+* Milestone 7 â€” Adaptive Revision: **Not Started**
+* Milestone 8 â€” Polish: **Not Started**
+* Milestone 9 â€” Deployment: **Not Started**
+* Milestone 10 â€” Documentation: **Not Started**
+
+Milestone 3 has not started.
+
+Do not implement Milestone 3 functionality as part of documentation maintenance.
+
+## 38.8 Current Development Rules
+
+All future work must preserve the following verified decisions:
+
+* Keep the application stateless for Version 1.
+* Do not add authentication.
+* Do not add a database.
+* Do not add history storage.
+* Do not introduce a frontend framework.
+* Do not add unnecessary architectural layers.
+* Keep API routes thin.
+* Keep AI SDK interaction inside services.
+* Keep prompt construction separate from Gemini SDK communication.
+* Keep deterministic application logic outside Gemini.
+* Preserve centralized configuration.
+* Preserve versioned `/api/v1` routing.
+* Preserve lazy Gemini client initialization.
+* Preserve sanitized client-facing errors.
+* Preserve sanitized backend logging.
+* Never expose secrets.
+* Never log user source material, full prompts, or generated content.
+* Inspect existing working code before modifying it.
+* Preserve completed Milestone 1 and Milestone 2 behavior.
+* Implement one milestone or clearly bounded task at a time.
+
+## 38.9 Current Repository State
+
+Verified completed milestone commits:
+
+```text
+8868ecb milestone 2 completed
+12d1d63 milestone 1 completed
+```
+
+The repository working tree was clean immediately after the Milestone 2 commit.
