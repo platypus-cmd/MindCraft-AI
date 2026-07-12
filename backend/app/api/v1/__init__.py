@@ -13,6 +13,8 @@ from app.api.v1.flashcards import router as flashcards_router
 from app.api.v1.health import router as health_router
 from app.api.v1.notes import router as notes_router
 from app.api.v1.quiz import router as quiz_router
+from app.api.v1.retest import router as retest_router
+from app.api.v1.revision import router as revision_router
 
 api_v1_router = APIRouter(prefix="/api/v1")
 
@@ -20,4 +22,6 @@ api_v1_router.include_router(health_router, tags=["health"])
 api_v1_router.include_router(notes_router, tags=["notes"])
 api_v1_router.include_router(flashcards_router, tags=["flashcards"])
 api_v1_router.include_router(quiz_router, tags=["quiz"])
+api_v1_router.include_router(revision_router, tags=["revision"])
+api_v1_router.include_router(retest_router, tags=["retest"])
 api_v1_router.include_router(documents_router, tags=["documents"])

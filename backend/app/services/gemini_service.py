@@ -2,11 +2,11 @@
 
 import asyncio
 import logging
-from typing import Any
+from typing import Any, TypeVar
 
 from google import genai
 from google.genai import errors
-from pydantic import ValidationError
+from pydantic import BaseModel, ValidationError
 
 from app.core.config import settings
 from app.schemas.notes import GeneratedNotesContent
@@ -18,6 +18,7 @@ from app.services.gemini_errors import (
 )
 
 logger = logging.getLogger(__name__)
+StructuredResponseT = TypeVar("StructuredResponseT", bound=BaseModel)
 
 
 class GeminiService:
@@ -35,7 +36,12 @@ class GeminiService:
 
         return self._client
 
-    async def generate_notes_content(self, prompt: str) -> GeneratedNotesContent:
+    async def generate_structured_content(
+        self,
+        prompt: str,
+        response_schema: type[StructuredResponseT],
+    ) -> StructuredResponseT:
+        """Generate and validate structured Gemini output for a Pydantic schema."""
         client = self._get_client()
 
         try:
@@ -45,7 +51,7 @@ class GeminiService:
                     contents=prompt,
                     config={
                         "response_mime_type": "application/json",
-                        "response_schema": GeneratedNotesContent,
+                        "response_schema": response_schema,
                     },
                 ),
                 timeout=settings.gemini_timeout_seconds,
@@ -65,19 +71,35 @@ class GeminiService:
             )
             raise GeminiUpstreamError("Gemini request failed.") from exc
 
-        return self._validate_parsed_response(getattr(response, "parsed", None))
+        return self._validate_parsed_response_for_schema(
+            getattr(response, "parsed", None),
+            response_schema,
+        )
+
+    async def generate_notes_content(self, prompt: str) -> GeneratedNotesContent:
+        return await self.generate_structured_content(prompt, GeneratedNotesContent)
 
     @staticmethod
     def _validate_parsed_response(parsed: Any) -> GeneratedNotesContent:
+        return GeminiService._validate_parsed_response_for_schema(
+            parsed,
+            GeneratedNotesContent,
+        )
+
+    @staticmethod
+    def _validate_parsed_response_for_schema(
+        parsed: Any,
+        response_schema: type[StructuredResponseT],
+    ) -> StructuredResponseT:
         if parsed is None:
             logger.error("Gemini returned no parsed structured response.")
             raise GeminiInvalidResponseError("Gemini response was not parsed.")
 
-        if isinstance(parsed, GeneratedNotesContent):
+        if isinstance(parsed, response_schema):
             return parsed
 
         try:
-            return GeneratedNotesContent.model_validate(parsed)
+            return response_schema.model_validate(parsed)
         except ValidationError as exc:
             logger.error("Gemini structured response failed schema validation.")
             raise GeminiInvalidResponseError(
