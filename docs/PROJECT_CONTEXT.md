@@ -1384,7 +1384,27 @@ Do not build the entire frontend before validating backend integration.
 Do not build every backend endpoint before completing the notes vertical slice.
 
 ---
+## 38.8 Development Workflow
 
+The workflow established during Milestones 1 through 5 becomes the standard engineering process for the remainder of Version 1.
+
+For every future milestone:
+
+1. Read this PROJECT_CONTEXT.md before making implementation decisions.
+2. Restrict implementation strictly to the approved milestone scope.
+3. Preserve all previously completed milestone functionality.
+4. Maintain the existing application architecture unless an approved design change requires otherwise.
+5. Add automated tests covering all newly introduced behavior.
+6. Execute the complete backend test suite.
+7. Verify frontend JavaScript syntax where applicable.
+8. Run `git diff --check` before staging changes.
+9. Perform manual verification of the new user workflow.
+10. Update this PROJECT_CONTEXT.md with a milestone implementation record matching the established documentation format.
+11. Review staged changes before committing.
+
+Implementation records must accurately describe the shipped functionality, automated testing, manual verification, architecture, security considerations, and known limitations.
+
+Documentation maintenance must never invent features, tests, implementation details, or verification that are not present in the codebase.
 # 35. Acceptance Criteria for Version 1
 
 MindCraft AI v1.0 is complete only when:
@@ -2287,11 +2307,11 @@ Current milestone status:
 * Milestone 9 â€” Deployment: **Not Started**
 * Milestone 10 â€” Documentation: **Not Started**
 
-Milestone 3 is complete.
+Milestones 1 through 5 are complete.
 
-Do not implement Milestone 3 functionality as part of documentation maintenance.
+Do not modify completed milestone functionality during documentation maintenance except to accurately document implemented behavior.
 
-## 38.8 Current Development Rules
+## 38.9 Current Development Rules
 
 All future work must preserve the following verified decisions:
 
@@ -2313,16 +2333,19 @@ All future work must preserve the following verified decisions:
 * Never expose secrets.
 * Never log user source material, full prompts, or generated content.
 * Inspect existing working code before modifying it.
-* Preserve completed Milestone 1 and Milestone 2 behavior.
+* Preserve completed Milestone 1 through Milestone 5 behavior.
 * Implement one milestone or clearly bounded task at a time.
 
-## 38.9 Current Repository State
+## 38.10 Current Repository State
 
 Verified completed milestone commits:
 
 ```text
-8868ecb milestone 2 completed
 12d1d63 milestone 1 completed
+8868ecb milestone 2 completed
+0c243b6 milestone 3 completed
+1b34629 milestone 4 completed
+cd43645 milestone 5 completed
 ```
 
-The repository working tree was clean immediately after the Milestone 2 commit.
+The repository working tree was clean immediately after the Milestone 5 commit.
