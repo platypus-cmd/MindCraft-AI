@@ -90,10 +90,25 @@
       <div id="notes-actions">
         <button id="copy-notes-btn" type="button" disabled>Copy Notes</button>
         <button id="export-pdf-btn" type="button" disabled>Export PDF</button>
+        <button id="generate-flashcards-btn" type="button" disabled>Generate Flashcards</button>
         <p id="notes-utility-message" data-state="idle"></p>
       </div>
       <div id="notes-meta"></div>
       <article id="notes-content"></article>
+      <section id="flashcards-output" aria-labelledby="flashcards-heading" hidden>
+        <h2 id="flashcards-heading">Flashcards</h2>
+        <p id="flashcards-message" data-state="idle"></p>
+        <div id="flashcard-controls" class="flashcard-controls">
+          <button id="flashcard-prev-btn" type="button" disabled>Previous</button>
+          <span id="flashcard-progress">0 / 0</span>
+          <button id="flashcard-next-btn" type="button" disabled>Next</button>
+        </div>
+        <button id="flashcard-flip-btn" type="button">Show Answer</button>
+        <div id="flashcard-card" class="flashcard-card" aria-live="polite">
+          <h3 id="flashcard-front">No flashcards yet.</h3>
+          <p id="flashcard-back" hidden></p>
+        </div>
+      </section>
     </section>
   </main>
 

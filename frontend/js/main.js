@@ -19,6 +19,15 @@ const notesContentEl = document.getElementById("notes-content");
 const copyNotesButtonEl = document.getElementById("copy-notes-btn");
 const exportPdfButtonEl = document.getElementById("export-pdf-btn");
 const notesUtilityMessageEl = document.getElementById("notes-utility-message");
+const generateFlashcardsButtonEl = document.getElementById("generate-flashcards-btn");
+const flashcardsOutputEl = document.getElementById("flashcards-output");
+const flashcardsMessageEl = document.getElementById("flashcards-message");
+const flashcardPrevButtonEl = document.getElementById("flashcard-prev-btn");
+const flashcardNextButtonEl = document.getElementById("flashcard-next-btn");
+const flashcardFlipButtonEl = document.getElementById("flashcard-flip-btn");
+const flashcardProgressEl = document.getElementById("flashcard-progress");
+const flashcardFrontEl = document.getElementById("flashcard-front");
+const flashcardBackEl = document.getElementById("flashcard-back");
 const pdfFileEl = document.getElementById("pdf-file");
 const extractPdfButtonEl = document.getElementById("extract-pdf-btn");
 const pdfMessageEl = document.getElementById("pdf-message");
@@ -26,7 +35,11 @@ const pdfMessageEl = document.getElementById("pdf-message");
 let isGeneratingNotes = false;
 let isExtractingPdf = false;
 let isExportingPdf = false;
+let isGeneratingFlashcards = false;
 let latestNotesResponse = null;
+let latestFlashcardsResponse = null;
+let flashcardIndex = 0;
+let flashcardsAreFlipped = false;
 
 function setStatus(state, message) {
   statusTextEl.dataset.state = state;
@@ -67,6 +80,7 @@ function updateNotesUtilityButtons() {
   const hasGeneratedNotes = latestNotesResponse !== null;
   copyNotesButtonEl.disabled = !hasGeneratedNotes;
   exportPdfButtonEl.disabled = !hasGeneratedNotes || isExportingPdf;
+  generateFlashcardsButtonEl.disabled = !hasGeneratedNotes || isGeneratingFlashcards;
 }
 
 function buildNotesPayload() {
@@ -340,6 +354,116 @@ async function handleExportPdf() {
   }
 }
 
+function setFlashcardsMessage(state, message) {
+  flashcardsMessageEl.dataset.state = state;
+  flashcardsMessageEl.textContent = message;
+}
+
+function resetFlashcardView() {
+  flashcardIndex = 0;
+  flashcardsAreFlipped = false;
+  flashcardBackEl.hidden = true;
+  flashcardFlipButtonEl.textContent = "Show Answer";
+  flashcardPrevButtonEl.disabled = true;
+  flashcardNextButtonEl.disabled = false;
+}
+
+function renderFlashcardsResponse(response) {
+  latestFlashcardsResponse = response;
+  flashcardsOutputEl.hidden = false;
+
+  if (!Array.isArray(response.flashcards) || response.flashcards.length === 0) {
+    flashcardFrontEl.textContent = "No flashcards available.";
+    flashcardBackEl.textContent = "";
+    flashcardBackEl.hidden = true;
+    flashcardProgressEl.textContent = "0 / 0";
+    flashcardPrevButtonEl.disabled = true;
+    flashcardNextButtonEl.disabled = true;
+    flashcardFlipButtonEl.disabled = true;
+    return;
+  }
+
+  flashcardFlipButtonEl.disabled = false;
+  resetFlashcardView();
+  updateFlashcardView();
+}
+
+function updateFlashcardView() {
+  if (!latestFlashcardsResponse || !Array.isArray(latestFlashcardsResponse.flashcards)) {
+    return;
+  }
+
+  const cards = latestFlashcardsResponse.flashcards;
+  const total = cards.length;
+
+  if (flashcardIndex < 0) {
+    flashcardIndex = 0;
+  }
+
+  if (flashcardIndex >= total) {
+    flashcardIndex = total - 1;
+  }
+
+  const card = cards[flashcardIndex];
+  flashcardFrontEl.textContent = card.front;
+  flashcardBackEl.textContent = flashcardsAreFlipped ? card.back : "";
+  flashcardBackEl.hidden = !flashcardsAreFlipped;
+  flashcardProgressEl.textContent = `${flashcardIndex + 1} / ${total}`;
+  flashcardPrevButtonEl.disabled = flashcardIndex === 0;
+  flashcardNextButtonEl.disabled = flashcardIndex >= total - 1;
+  flashcardFlipButtonEl.textContent = flashcardsAreFlipped ? "Hide Answer" : "Show Answer";
+}
+
+function handleFlashcardFlip() {
+  if (!latestFlashcardsResponse || !Array.isArray(latestFlashcardsResponse.flashcards)) {
+    return;
+  }
+
+  flashcardsAreFlipped = !flashcardsAreFlipped;
+  updateFlashcardView();
+}
+
+function handleFlashcardPrevious() {
+  if (flashcardIndex > 0) {
+    flashcardIndex -= 1;
+    flashcardsAreFlipped = false;
+    updateFlashcardView();
+  }
+}
+
+function handleFlashcardNext() {
+  if (!latestFlashcardsResponse || !Array.isArray(latestFlashcardsResponse.flashcards)) {
+    return;
+  }
+
+  if (flashcardIndex < latestFlashcardsResponse.flashcards.length - 1) {
+    flashcardIndex += 1;
+    flashcardsAreFlipped = false;
+    updateFlashcardView();
+  }
+}
+
+async function handleGenerateFlashcards() {
+  if (!latestNotesResponse || isGeneratingFlashcards) {
+    return;
+  }
+
+  isGeneratingFlashcards = true;
+  generateFlashcardsButtonEl.disabled = true;
+  setFlashcardsMessage("loading", "Generating flashcards...");
+
+  try {
+    const response = await generateFlashcards(latestNotesResponse);
+    renderFlashcardsResponse(response);
+    setFlashcardsMessage("success", "Flashcards generated successfully.");
+  } catch (error) {
+    setFlashcardsMessage("error", error.message || "Could not generate flashcards.");
+  } finally {
+    isGeneratingFlashcards = false;
+    updateNotesUtilityButtons();
+  }
+}
+
 function setPdfMessage(state, message) {
   pdfMessageEl.dataset.state = state;
   pdfMessageEl.textContent = message;
@@ -391,4 +515,8 @@ notesFormEl.addEventListener("submit", handleGenerateNotes);
 extractPdfButtonEl.addEventListener("click", handleExtractPdf);
 copyNotesButtonEl.addEventListener("click", handleCopyNotes);
 exportPdfButtonEl.addEventListener("click", handleExportPdf);
+generateFlashcardsButtonEl.addEventListener("click", handleGenerateFlashcards);
+flashcardPrevButtonEl.addEventListener("click", handleFlashcardPrevious);
+flashcardNextButtonEl.addEventListener("click", handleFlashcardNext);
+flashcardFlipButtonEl.addEventListener("click", handleFlashcardFlip);
 updateNotesUtilityButtons();

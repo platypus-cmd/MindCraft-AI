@@ -82,3 +82,21 @@ async function exportNotesPdf(notesResponse) {
 
   return response.blob();
 }
+
+async function generateFlashcards(notesResponse) {
+  const response = await fetch(`${API_BASE_URL}/api/v1/flashcards/generate`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ notes_response: notesResponse }),
+  });
+
+  const data = await response.json().catch(() => ({}));
+
+  if (!response.ok) {
+    throw new Error(data.detail || "Flashcard generation failed.");
+  }
+
+  return data;
+}
