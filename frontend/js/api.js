@@ -65,3 +65,20 @@ async function extractPdfText(file) {
 
   return data;
 }
+
+async function exportNotesPdf(notesResponse) {
+  const response = await fetch(`${API_BASE_URL}/api/v1/notes/export/pdf`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(notesResponse),
+  });
+
+  if (!response.ok) {
+    const data = await response.json().catch(() => ({}));
+    throw new Error(data.detail || "PDF export failed.");
+  }
+
+  return response.blob();
+}

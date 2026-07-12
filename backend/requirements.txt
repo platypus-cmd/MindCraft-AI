@@ -4,3 +4,4 @@ pydantic-settings
 google-genai
 pypdf
 python-multipart
+reportlab

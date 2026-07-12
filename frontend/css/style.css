@@ -82,19 +82,35 @@ button:focus {
 }
 
 #source-help,
-#notes-message {
+#notes-message,
+#notes-utility-message {
   color: #6e6e73;
   margin: 8px 0 0;
 }
 
-#notes-message[data-state="success"] {
+#notes-message[data-state="success"],
+#notes-utility-message[data-state="success"] {
   color: #1a7f37;
   font-weight: 600;
 }
 
-#notes-message[data-state="error"] {
+#notes-message[data-state="error"],
+#notes-utility-message[data-state="error"] {
   color: #c0392b;
   font-weight: 600;
+}
+
+#notes-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+#notes-actions button,
+#notes-actions p {
+  margin-top: 0;
 }
 
 button {

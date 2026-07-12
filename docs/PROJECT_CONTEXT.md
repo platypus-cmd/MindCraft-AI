@@ -1876,6 +1876,212 @@ PDF extraction may preserve line breaks, hyphenation, or other formatting artifa
 
 No file content or extracted text is persisted.
 
+# 40. Milestone 4 Implementation Record
+
+Milestone 4 adds Notes Utilities while preserving the completed Notes generation and PDF input workflows.
+
+Reading time was completed early during Milestone 2 and remains unchanged.
+
+## 40.1 Milestone 4 Scope
+
+Milestone 4 implements the remaining Notes Utilities:
+
+* Copy Notes.
+* PDF Export.
+
+Milestone 4 preserves:
+
+* Existing deterministic reading-time calculation.
+* Existing Gemini prompt logic.
+* Existing Gemini service behavior.
+* Existing document extraction behavior.
+* Application statelessness.
+
+Milestone 4 does not add:
+
+* Database storage.
+* Authentication.
+* Notes history.
+* Generated-content persistence.
+* Additional export formats.
+* Notes regeneration during export.
+* Custom PDF themes or final visual polish.
+
+## 40.2 Copy Notes
+
+Copy Notes is implemented entirely in the frontend.
+
+The generated notes state includes an explicit Copy Notes button.
+
+The button is disabled until notes have been generated successfully.
+
+The frontend stores the latest successful `NotesResponse` in memory only.
+
+Copy Notes formats the complete generated notes as readable plain text, including:
+
+* Title.
+* Estimated reading time.
+* Table of contents.
+* Every section heading.
+* Section content.
+* Key points.
+* Definitions.
+* Examples.
+* Memory tricks.
+* Common mistakes.
+* Summary.
+* Key takeaways.
+* One-minute revision.
+
+Copying occurs only after explicit user action.
+
+The frontend uses the browser Clipboard API.
+
+The frontend uses safe DOM APIs and does not use `innerHTML`.
+
+Copy success and failure feedback is sanitized.
+
+## 40.3 PDF Export
+
+PDF Export is implemented through:
+
+`POST /api/v1/notes/export/pdf`
+
+The request body reuses the existing `NotesResponse` schema.
+
+The endpoint returns:
+
+* `Content-Type: application/pdf`
+* `Content-Disposition: attachment; filename="mindcraft-notes.pdf"`
+* Generated PDF bytes.
+
+PDF generation is isolated in:
+
+`backend/app/services/notes_export_service.py`
+
+The export service uses ReportLab Platypus and `io.BytesIO`.
+
+PDF generation is entirely in memory.
+
+No temporary files are written.
+
+Generated notes and PDF bytes are not persisted to disk, a database, object storage, or any other storage layer.
+
+PDF Export does not call Gemini.
+
+PDF Export does not regenerate notes.
+
+Existing reading-time logic is unchanged.
+
+The generated PDF contains the complete `NotesResponse` content:
+
+* Title.
+* Estimated reading time.
+* Table of contents.
+* Every section.
+* Section headings.
+* Section content.
+* Key points.
+* Definitions.
+* Examples.
+* Memory tricks.
+* Common mistakes.
+* Summary.
+* Key takeaways.
+* One-minute revision.
+
+The frontend sends the latest successful `NotesResponse` to the export endpoint, receives the PDF response as a `Blob`, creates an object URL, triggers a browser download named `mindcraft-notes.pdf`, and revokes the object URL after starting the download.
+
+## 40.4 Dependencies
+
+Milestone 4 adds:
+
+* `reportlab`
+
+No frontend PDF library is added.
+
+## 40.5 Testing and Verification
+
+Previous automated backend test result before Milestone 4:
+
+**54 tests passing.**
+
+Milestone 4 adds 9 automated tests.
+
+Final automated backend test result after Milestone 4:
+
+**63 tests passing.**
+
+Automated tests cover:
+
+* Successful PDF generation.
+* PDF return type as bytes.
+* Non-empty PDF output.
+* `%PDF-` byte signature.
+* PDF parseability using `pypdf`.
+* Representative complete PDF content, including title, estimated reading time, table of contents, section content, key points, definitions, examples, memory tricks, common mistakes, summary, key takeaways, and one-minute revision.
+* PDF generation isolation from Gemini.
+* Unexpected programming-error propagation.
+* Export endpoint HTTP 200 success behavior.
+* `application/pdf` response content type.
+* `Content-Disposition` attachment filename.
+* PDF response body signature.
+* Native FastAPI/Pydantic HTTP 422 behavior for invalid request bodies.
+* Missing required nested content validation.
+* Endpoint unexpected-error behavior.
+
+Additional verification completed:
+
+* JavaScript syntax checks passed.
+* Application import succeeds.
+* `GET /api/v1/health` succeeds.
+* Existing Notes endpoint regression verification passed.
+* Existing document extraction endpoint regression verification passed.
+* `git diff --check` passed with only LF-to-CRLF warnings.
+
+Manual verification completed:
+
+* Real notes generation succeeded.
+* Copy Notes button state behavior passed.
+* Copy Notes copied complete readable notes successfully.
+* Real PDF Export browser download succeeded.
+* Exported `mindcraft-notes.pdf` opened successfully and contained readable notes across multiple pages.
+* PDF extraction from Milestone 3 still populated the source-text textarea.
+* Notes generation from extracted PDF text succeeded.
+* Copy Notes and PDF Export worked for notes generated from extracted PDF text.
+* PDF extraction did not automatically generate notes.
+* Failed subsequent generation preserved the latest successful `NotesResponse`, and Copy Notes and PDF Export continued to operate on that latest successful response.
+
+## 40.6 Architecture and Security
+
+The application remains stateless.
+
+No generated notes or PDF bytes are persisted.
+
+No generated notes or PDF bytes are logged.
+
+No broad exception handling was added to mislabel programming errors.
+
+Unexpected programming errors propagate through normal application error handling.
+
+Native FastAPI/Pydantic HTTP 422 behavior is preserved.
+
+Existing Gemini behavior remains unchanged.
+
+Existing document extraction behavior remains unchanged.
+
+No secrets are exposed.
+
+## 40.7 Known Limitations
+
+PDF presentation is intentionally simple.
+
+Custom PDF themes and final visual polish remain deferred to Milestone 8.
+
+Copy Notes depends on browser Clipboard API availability.
+
+PDF Export exports the current/latest successful `NotesResponse` and does not regenerate notes.
+
 ## 38.7 Milestone Plan Status
 
 Current milestone status:
@@ -1883,7 +2089,7 @@ Current milestone status:
 * Milestone 1 â€” Foundation: **Complete**
 * Milestone 2 â€” Notes Vertical Slice: **Complete**
 * Milestone 3 â€” PDF Input: **Complete**
-* Milestone 4 â€” Notes Utilities: **Not Started, with reading time completed early during Milestone 2**
+* Milestone 4 â€” Notes Utilities: **Complete, with reading time completed early during Milestone 2**
 * Milestone 5 â€” Flashcards: **Not Started**
 * Milestone 6 â€” Quiz: **Not Started**
 * Milestone 7 â€” Adaptive Revision: **Not Started**

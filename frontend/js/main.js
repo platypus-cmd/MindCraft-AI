@@ -16,12 +16,17 @@ const generateNotesButtonEl = document.getElementById("generate-notes-btn");
 const notesOutputEl = document.getElementById("notes-output");
 const notesMetaEl = document.getElementById("notes-meta");
 const notesContentEl = document.getElementById("notes-content");
+const copyNotesButtonEl = document.getElementById("copy-notes-btn");
+const exportPdfButtonEl = document.getElementById("export-pdf-btn");
+const notesUtilityMessageEl = document.getElementById("notes-utility-message");
 const pdfFileEl = document.getElementById("pdf-file");
 const extractPdfButtonEl = document.getElementById("extract-pdf-btn");
 const pdfMessageEl = document.getElementById("pdf-message");
 
 let isGeneratingNotes = false;
 let isExtractingPdf = false;
+let isExportingPdf = false;
+let latestNotesResponse = null;
 
 function setStatus(state, message) {
   statusTextEl.dataset.state = state;
@@ -51,6 +56,17 @@ async function handleCheckConnection() {
 function setNotesMessage(state, message) {
   notesMessageEl.dataset.state = state;
   notesMessageEl.textContent = message;
+}
+
+function setNotesUtilityMessage(state, message) {
+  notesUtilityMessageEl.dataset.state = state;
+  notesUtilityMessageEl.textContent = message;
+}
+
+function updateNotesUtilityButtons() {
+  const hasGeneratedNotes = latestNotesResponse !== null;
+  copyNotesButtonEl.disabled = !hasGeneratedNotes;
+  exportPdfButtonEl.disabled = !hasGeneratedNotes || isExportingPdf;
 }
 
 function buildNotesPayload() {
@@ -124,6 +140,83 @@ function appendDefinitions(parent, definitions) {
   parent.appendChild(list);
 }
 
+function formatListForCopy(title, items) {
+  const lines = [`${title}:`];
+
+  if (!Array.isArray(items) || items.length === 0) {
+    lines.push("- None");
+    return lines.join("\n");
+  }
+
+  items.forEach((item) => {
+    lines.push(`- ${item}`);
+  });
+
+  return lines.join("\n");
+}
+
+function formatDefinitionsForCopy(definitions) {
+  const lines = ["Definitions:"];
+
+  if (!Array.isArray(definitions) || definitions.length === 0) {
+    lines.push("- None");
+    return lines.join("\n");
+  }
+
+  definitions.forEach((item) => {
+    lines.push(`- ${item.term}: ${item.definition}`);
+  });
+
+  return lines.join("\n");
+}
+
+function formatNotesResponseAsPlainText(response) {
+  const notes = response.notes;
+  const sections = [
+    notes.title,
+    "",
+    `Estimated reading time: ${response.estimated_reading_time_minutes} minute(s)`,
+    "",
+    formatListForCopy("Table of Contents", notes.table_of_contents),
+  ];
+
+  if (Array.isArray(notes.sections)) {
+    notes.sections.forEach((section) => {
+      sections.push(
+        "",
+        section.heading,
+        "",
+        section.content,
+        "",
+        formatListForCopy("Key Points", section.key_points),
+        "",
+        formatDefinitionsForCopy(section.definitions),
+        "",
+        formatListForCopy("Examples", section.examples),
+        "",
+        formatListForCopy("Memory Tricks", section.memory_tricks),
+        "",
+        formatListForCopy("Common Mistakes", section.common_mistakes)
+      );
+    });
+  }
+
+  sections.push(
+    "",
+    "Summary",
+    "",
+    notes.summary,
+    "",
+    formatListForCopy("Key Takeaways", notes.key_takeaways),
+    "",
+    "One-Minute Revision",
+    "",
+    notes.one_minute_revision
+  );
+
+  return sections.join("\n").trim();
+}
+
 function renderNotesResponse(response) {
   notesMetaEl.replaceChildren();
   notesContentEl.replaceChildren();
@@ -183,13 +276,67 @@ async function handleGenerateNotes(event) {
 
   try {
     const response = await generateNotes(payload);
+    latestNotesResponse = response;
     renderNotesResponse(response);
+    updateNotesUtilityButtons();
+    setNotesUtilityMessage("idle", "");
     setNotesMessage("success", "Notes generated successfully.");
   } catch (error) {
     setNotesMessage("error", error.message || "Could not generate notes.");
   } finally {
     isGeneratingNotes = false;
     generateNotesButtonEl.disabled = false;
+  }
+}
+
+async function handleCopyNotes() {
+  if (!latestNotesResponse) {
+    setNotesUtilityMessage("error", "Generate notes before copying.");
+    return;
+  }
+
+  if (!navigator.clipboard || !navigator.clipboard.writeText) {
+    setNotesUtilityMessage("error", "Clipboard access is not available in this browser.");
+    return;
+  }
+
+  try {
+    await navigator.clipboard.writeText(
+      formatNotesResponseAsPlainText(latestNotesResponse)
+    );
+    setNotesUtilityMessage("success", "Notes copied.");
+  } catch (error) {
+    setNotesUtilityMessage("error", "Could not copy notes.");
+  }
+}
+
+async function handleExportPdf() {
+  if (!latestNotesResponse || isExportingPdf) {
+    return;
+  }
+
+  isExportingPdf = true;
+  updateNotesUtilityButtons();
+  setNotesUtilityMessage("loading", "Exporting PDF...");
+
+  try {
+    const pdfBlob = await exportNotesPdf(latestNotesResponse);
+    const objectUrl = URL.createObjectURL(pdfBlob);
+    const downloadLink = document.createElement("a");
+
+    downloadLink.href = objectUrl;
+    downloadLink.download = "mindcraft-notes.pdf";
+    document.body.appendChild(downloadLink);
+    downloadLink.click();
+    downloadLink.remove();
+    URL.revokeObjectURL(objectUrl);
+
+    setNotesUtilityMessage("success", "PDF export started.");
+  } catch (error) {
+    setNotesUtilityMessage("error", error.message || "Could not export PDF.");
+  } finally {
+    isExportingPdf = false;
+    updateNotesUtilityButtons();
   }
 }
 
@@ -242,3 +389,6 @@ async function handleExtractPdf() {
 checkButtonEl.addEventListener("click", handleCheckConnection);
 notesFormEl.addEventListener("submit", handleGenerateNotes);
 extractPdfButtonEl.addEventListener("click", handleExtractPdf);
+copyNotesButtonEl.addEventListener("click", handleCopyNotes);
+exportPdfButtonEl.addEventListener("click", handleExportPdf);
+updateNotesUtilityButtons();

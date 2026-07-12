@@ -1,9 +1,9 @@
 """Notes generation API routes."""
 
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, HTTPException, Response, status
 
 from app.schemas.notes import NotesRequest, NotesResponse
-from app.services import notes_service
+from app.services import notes_export_service, notes_service
 from app.services.gemini_errors import (
     GeminiConfigurationError,
     GeminiInvalidResponseError,
@@ -38,3 +38,15 @@ async def generate_notes(request: NotesRequest) -> NotesResponse:
             status_code=status.HTTP_502_BAD_GATEWAY,
             detail="Notes generation is temporarily unavailable.",
         ) from exc
+
+
+@router.post("/export/pdf")
+async def export_notes_pdf(notes_response: NotesResponse) -> Response:
+    pdf_bytes = notes_export_service.generate_notes_pdf(notes_response)
+    return Response(
+        content=pdf_bytes,
+        media_type="application/pdf",
+        headers={
+            "Content-Disposition": 'attachment; filename="mindcraft-notes.pdf"',
+        },
+    )
