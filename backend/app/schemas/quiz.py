@@ -10,8 +10,9 @@ class QuizQuestion(BaseModel):
     options: list[str] = Field(min_length=4, max_length=4)
     correct_answer: str = Field(min_length=1)
     explanation: str = Field(min_length=1)
+    concept: str = Field(min_length=1)
 
-    @field_validator("question", "correct_answer", "explanation", mode="before")
+    @field_validator("question", "correct_answer", "explanation", "concept", mode="before")
     @classmethod
     def normalize_and_validate_text(cls, value: str) -> str:
         if not isinstance(value, str):

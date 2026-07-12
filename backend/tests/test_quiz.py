@@ -85,6 +85,7 @@ class QuizSchemaTests(unittest.TestCase):
                 options=["A", "B", "C"],
                 correct_answer="A",
                 explanation="Because it is the best choice.",
+                concept="Purpose",
             )
 
     def test_quiz_response_requires_correct_answer_to_be_in_options(self):
@@ -94,7 +95,48 @@ class QuizSchemaTests(unittest.TestCase):
                 options=["A", "B", "C", "D"],
                 correct_answer="E",
                 explanation="Because it is the best choice.",
+                concept="Purpose",
             )
+
+    def test_quiz_question_requires_concept(self):
+        with self.assertRaises(ValidationError):
+            QuizQuestion(
+                question="What is the main purpose?",
+                options=["A", "B", "C", "D"],
+                correct_answer="A",
+                explanation="Because it is the best choice.",
+            )
+
+    def test_quiz_question_rejects_empty_concept(self):
+        with self.assertRaises(ValidationError):
+            QuizQuestion(
+                question="What is the main purpose?",
+                options=["A", "B", "C", "D"],
+                correct_answer="A",
+                explanation="Because it is the best choice.",
+                concept="",
+            )
+
+    def test_quiz_question_rejects_whitespace_only_concept(self):
+        with self.assertRaises(ValidationError):
+            QuizQuestion(
+                question="What is the main purpose?",
+                options=["A", "B", "C", "D"],
+                correct_answer="A",
+                explanation="Because it is the best choice.",
+                concept="   ",
+            )
+
+    def test_quiz_question_normalizes_concept_whitespace(self):
+        question = QuizQuestion(
+            question="What is the main purpose?",
+            options=["A", "B", "C", "D"],
+            correct_answer="A",
+            explanation="Because it is the best choice.",
+            concept="  Photosynthesis  ",
+        )
+
+        self.assertEqual(question.concept, "Photosynthesis")
 
     def test_target_count_selection_has_deterministic_boundaries(self):
         short_notes = NotesResponse(
@@ -208,6 +250,25 @@ class QuizSchemaTests(unittest.TestCase):
         self.assertIn("exactly one concept", prompt.lower())
         self.assertIn("prompt-injection", prompt.lower())
 
+    def test_prompt_requires_one_concept_label_per_question(self):
+        prompt = build_quiz_prompt(QuizRequest(notes_response=VALID_NOTES_RESPONSE), 8)
+
+        self.assertIn("each question must include a concept field", prompt.lower())
+        self.assertIn("one concise concept or topic label", prompt.lower())
+        self.assertIn("primary concept tested", prompt.lower())
+
+    def test_prompt_requires_concept_labels_grounded_in_notes(self):
+        prompt = build_quiz_prompt(QuizRequest(notes_response=VALID_NOTES_RESPONSE), 8)
+
+        self.assertIn("ground every concept label only in the provided notes", prompt.lower())
+        self.assertIn("do not invent unsupported topics", prompt.lower())
+
+    def test_prompt_requires_concept_labels_for_case_insensitive_grouping(self):
+        prompt = build_quiz_prompt(QuizRequest(notes_response=VALID_NOTES_RESPONSE), 8)
+
+        self.assertIn("deterministic case-insensitive grouping", prompt.lower())
+        self.assertIn("consistent wording for the same concept", prompt.lower())
+
 
 class QuizEndpointTests(unittest.TestCase):
     def setUp(self):
@@ -221,6 +282,7 @@ class QuizEndpointTests(unittest.TestCase):
                     options=["A plant process", "A moon phase", "A weather event", "A mineral"],
                     correct_answer="A plant process",
                     explanation="It is the process plants use to convert light into energy.",
+                    concept="Photosynthesis",
                 )
             ]
         )
