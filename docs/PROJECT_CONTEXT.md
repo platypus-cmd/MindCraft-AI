@@ -1386,7 +1386,7 @@ Do not build every backend endpoint before completing the notes vertical slice.
 ---
 ## 38.8 Development Workflow
 
-The workflow established during Milestones 1 through 5 becomes the standard engineering process for the remainder of Version 1.
+The workflow established during Milestones 1 through 6 becomes the standard engineering process for the remainder of Version 1.
 
 For every future milestone:
 
@@ -2291,6 +2291,146 @@ Version 1 does not include spaced repetition, adaptive scheduling, user progress
 
 Flashcards are intended as lightweight revision material rather than comprehensive study notes.
 
+## 42. Milestone 6 Implementation Record
+
+Milestone 6 implements the AI-powered Quiz workflow and extends the existing study loop with a deterministic, frontend-driven interactive assessment while preserving the Version 1 architecture and design principles.
+
+## 42.1 Milestone 6 Scope
+
+Milestone 6 implements:
+
+* Structured quiz generation grounded in generated notes.
+* A dedicated Quiz API route and thin controller.
+* Prompt-building logic for quiz generation.
+* A Quiz service that calls Gemini and validates structured output.
+* Deterministic question-count selection performed outside Gemini.
+* Client-side quiz interaction (one question at a time, MCQs).
+* Immutable per-question submission state persisted in browser memory.
+* Deterministic scoring calculated by application logic.
+* Completion summary and local Restart/Generate-New-Quiz behaviors.
+
+Milestone 6 preserves:
+
+* Existing Notes, Flashcards, and PDF workflows.
+* Stateless application architecture (no DB, no auth).
+* Prompt construction separated from Gemini communication.
+
+Milestone 6 does not add:
+
+* Persistence or server-side session state.
+* Authentication.
+* Timers, leaderboards, analytics, gamification, or quiz export.
+* Weak-topic Teach Me, Focused Revision, or Retest flows (deferred to Milestone 7).
+
+## 42.2 Backend Architecture
+
+The backend additions follow the established thin-route / service / prompt / Gemini / validation pattern:
+
+* `POST /api/v1/quiz/generate` — thin API route that validates the request and forwards to the quiz service.
+* `backend/app/prompts/quiz.py` — prompt builder that grounds the quiz in the latest `NotesResponse` and instructs Gemini to emit structured JSON for each question.
+* `backend/app/services/quiz_service.py` — orchestration layer that selects question count deterministically, composes the prompt, calls the Gemini service, parses and validates the structured output, and returns a `QuizResponse`.
+* Gemini errors and invalid responses are mapped to sanitized HTTP errors consistent with existing Gemini error conventions.
+
+The backend remains stateless; deterministic logic (question count selection and scoring) is implemented in application code rather than relying on Gemini.
+
+## 42.3 Grounding Strategy
+
+Quiz generation is explicitly grounded in the latest successful `NotesResponse` provided by the frontend. The prompt:
+
+* Supplies the generated notes as the sole grounding material.
+* Requests an exact number of multiple-choice questions.
+* Requires four answer options per question and a single correct answer.
+* Includes brief explanations and a concept/topic label per question for downstream weak-topic analysis (Milestone 7).
+
+## 42.4 Deterministic Question-Count Selection
+
+The target question count is chosen by deterministic application logic (based on notes length/complexity) outside Gemini. Gemini is instructed to return exactly the requested number of questions; no randomness is introduced by the backend prompt composition.
+
+## 42.5 Frontend Integration
+
+Frontend changes are additive and preserve the existing UI architecture:
+
+* `Generate Quiz` is enabled only after a successful `NotesResponse` exists.
+* The frontend posts the latest `NotesResponse` to the quiz endpoint to request a `QuizResponse`.
+* The latest successful `QuizResponse` is stored in-memory in the browser only.
+* The UI presents one question at a time with four answer choices, Previous/Next navigation, progress indicator, and a Submit button.
+
+Immutable per-question submission state:
+
+* Each question maintains its own state object `{ selectedAnswer, submittedAnswer, isCorrect, explanation, isSubmitted }`.
+* On first submission the answer is recorded, evaluated against the known `correct_answer`, and the result (correct/incorrect) and explanation are stored on the question object.
+* Submitted answers disable further interaction for that question (choices and Submit button) and persist when navigating away and back.
+
+Score tracking and completion behavior:
+
+* Score is calculated deterministically in the frontend and only changes on the first submission for each question.
+* After the last unanswered question is submitted the UI enters a quiz-complete state:
+    - The question text, answer choices, Submit button, explanation, and navigation controls are hidden.
+    - A quiz summary is shown containing final score, percentage, correct count, incorrect count, and controls to Restart Quiz or Generate New Quiz.
+* `Restart Quiz` resets per-question answers and score but preserves the existing `QuizResponse` (no Gemini call).
+* `Generate New Quiz` requests a fresh `QuizResponse` from the backend, replacing the previous quiz and resetting all quiz state.
+
+Failed quiz generation preserves the latest successful quiz state (no destructive replacement on error).
+
+## 42.6 Testing and Verification
+
+Automated verification performed on Milestone 6:
+
+* Previous backend suite after Milestone 5: **73 tests passing**.
+* Milestone 6 added 12 backend tests.
+* Final backend suite after Milestone 6: **85 tests passing**.
+* Frontend syntax checks: `node --check frontend/js/api.js` and `node --check frontend/js/main.js` completed successfully.
+* `git diff --check` ran and returned only the existing LF-to-CRLF warning for `frontend/css/style.css`.
+
+Manual verification completed (representative):
+
+* Notes generation succeeded and was used as grounding for quiz generation.
+* Quiz generation succeeded and returned a validated structured `QuizResponse`.
+* Correct-answer submission recorded and displayed success feedback and explanation.
+* Incorrect-answer submission recorded and displayed the correct answer and explanation.
+* Submitted answers became immutable and persisted across navigation.
+* Score updated only on first submission per question; revisiting questions did not alter score.
+* Completion summary displayed final score, percentage, correct and incorrect counts.
+* Completion UI hides question UI and navigation controls so only the summary remains.
+* `Restart Quiz` reset answers, score, navigation, and exited the complete state without calling Gemini.
+* `Generate New Quiz` replaced the quiz, reset state, and exited the complete state.
+
+## 42.7 Architecture and Security
+
+* The application remains stateless for Version 1; no server-side persistence or user accounts were added.
+* Gemini API keys remain backend-only; no secrets were added to the frontend or repository.
+* Prompt-building, Gemini calls, and structured-response validation remain inside backend services.
+* Deterministic application logic (question-count selection and scoring) runs in application code rather than relying on Gemini.
+
+## 42.8 Known Limitations
+
+Milestone 6 intentionally does NOT add:
+
+* Persistence or server-side session state.
+* Weak-topic Teach Me, Focused Revision, or Retest flows (deferred to Milestone 7).
+* Spaced repetition, gamification, timers, leaderboards, or analytics.
+
+These adaptive-learning features are in scope for Milestone 7 and were explicitly deferred.
+
+## 42.9 Files Created and Modified During Milestone 6
+
+Files created during Milestone 6:
+
+* `backend/app/api/v1/quiz.py`
+* `backend/app/prompts/quiz.py`
+* `backend/app/schemas/quiz.py`
+* `backend/app/services/quiz_service.py`
+* `backend/tests/test_quiz.py`
+
+Files modified during Milestone 6:
+
+* `backend/app/api/v1/__init__.py`
+* `frontend/css/style.css`
+* `frontend/index.html`
+* `frontend/js/api.js`
+* `frontend/js/main.js`
+
+These files were added/edited as part of the milestone implementation; according to repository state the new backend quiz files are present in the working tree but not yet committed.
 
 ## 38.7 Milestone Plan Status
 
@@ -2301,13 +2441,13 @@ Current milestone status:
 * Milestone 3 â€” PDF Input: **Complete**
 * Milestone 4 â€” Notes Utilities: **Complete, with reading time completed early during Milestone 2**
 * Milestone 5 â€” Flashcards: **Complete**
-* Milestone 6 â€” Quiz: **Not Started**
+* Milestone 6 â€” Quiz: **Complete**
 * Milestone 7 â€” Adaptive Revision: **Not Started**
 * Milestone 8 â€” Polish: **Not Started**
 * Milestone 9 â€” Deployment: **Not Started**
 * Milestone 10 â€” Documentation: **Not Started**
 
-Milestones 1 through 5 are complete.
+Milestones 1 through 6 are complete.
 
 Do not modify completed milestone functionality during documentation maintenance except to accurately document implemented behavior.
 
@@ -2333,7 +2473,7 @@ All future work must preserve the following verified decisions:
 * Never expose secrets.
 * Never log user source material, full prompts, or generated content.
 * Inspect existing working code before modifying it.
-* Preserve completed Milestone 1 through Milestone 5 behavior.
+* Preserve completed Milestone 1 through Milestone 6 behavior.
 * Implement one milestone or clearly bounded task at a time.
 
 ## 38.10 Current Repository State
@@ -2349,3 +2489,25 @@ cd43645 milestone 5 completed
 ```
 
 The repository working tree was clean immediately after the Milestone 5 commit.
+
+Milestone 6 implementation status (working-tree state):
+
+* Milestone 6 (Quiz) implementation and verification are complete in the workspace, but the changes have not been committed yet. The new backend quiz files and frontend edits are present in the working tree (uncommitted) on branch `milestone-6-quiz` according to the local workspace state.
+
+Files added during the Milestone 6 work (uncommitted in the working tree):
+
+* backend/app/api/v1/quiz.py
+* backend/app/prompts/quiz.py
+* backend/app/schemas/quiz.py
+* backend/app/services/quiz_service.py
+* backend/tests/test_quiz.py
+
+Files modified during the Milestone 6 work (uncommitted changes in the working tree):
+
+* backend/app/api/v1/__init__.py
+* frontend/css/style.css
+* frontend/index.html
+* frontend/js/api.js
+* frontend/js/main.js
+
+Do not assume these Milestone 6 changes are recorded in a commit; the implementation record above documents the completed work and verification, but no Milestone 6 commit hash is provided here.

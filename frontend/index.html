@@ -91,6 +91,7 @@
         <button id="copy-notes-btn" type="button" disabled>Copy Notes</button>
         <button id="export-pdf-btn" type="button" disabled>Export PDF</button>
         <button id="generate-flashcards-btn" type="button" disabled>Generate Flashcards</button>
+        <button id="generate-quiz-btn" type="button" disabled>Generate Quiz</button>
         <p id="notes-utility-message" data-state="idle"></p>
       </div>
       <div id="notes-meta"></div>
@@ -107,6 +108,28 @@
         <div id="flashcard-card" class="flashcard-card" aria-live="polite">
           <h3 id="flashcard-front">No flashcards yet.</h3>
           <p id="flashcard-back" hidden></p>
+        </div>
+      </section>
+      <section id="quiz-output" aria-labelledby="quiz-heading" hidden>
+        <h2 id="quiz-heading">Quiz</h2>
+        <p id="quiz-message" data-state="idle"></p>
+        <div id="quiz-controls" class="flashcard-controls">
+          <button id="quiz-prev-btn" type="button" disabled>Previous</button>
+          <span id="quiz-progress">0 / 0</span>
+          <button id="quiz-next-btn" type="button" disabled>Next</button>
+        </div>
+        <p id="quiz-score" class="quiz-score">Score: 0 / 0</p>
+        <div id="quiz-summary" class="quiz-summary" hidden>
+          <h3>Quiz Summary</h3>
+          <p id="quiz-summary-score"></p>
+          <p id="quiz-summary-details"></p>
+          <button id="quiz-restart-btn" type="button">Restart Quiz</button>
+        </div>
+        <div id="quiz-card" class="flashcard-card" aria-live="polite">
+          <h3 id="quiz-question">No quiz yet.</h3>
+          <div id="quiz-options"></div>
+          <button id="quiz-submit-btn" type="button" disabled>Submit Answer</button>
+          <p id="quiz-feedback" data-state="idle"></p>
         </div>
       </section>
     </section>

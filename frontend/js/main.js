@@ -28,6 +28,23 @@ const flashcardFlipButtonEl = document.getElementById("flashcard-flip-btn");
 const flashcardProgressEl = document.getElementById("flashcard-progress");
 const flashcardFrontEl = document.getElementById("flashcard-front");
 const flashcardBackEl = document.getElementById("flashcard-back");
+const generateQuizButtonEl = document.getElementById("generate-quiz-btn");
+const quizOutputEl = document.getElementById("quiz-output");
+const quizMessageEl = document.getElementById("quiz-message");
+const quizPrevButtonEl = document.getElementById("quiz-prev-btn");
+const quizNextButtonEl = document.getElementById("quiz-next-btn");
+const quizSubmitButtonEl = document.getElementById("quiz-submit-btn");
+const quizProgressEl = document.getElementById("quiz-progress");
+const quizControlsEl = document.getElementById("quiz-controls");
+const quizCardEl = document.getElementById("quiz-card");
+const quizScoreEl = document.getElementById("quiz-score");
+const quizSummaryEl = document.getElementById("quiz-summary");
+const quizSummaryScoreEl = document.getElementById("quiz-summary-score");
+const quizSummaryDetailsEl = document.getElementById("quiz-summary-details");
+const quizQuestionEl = document.getElementById("quiz-question");
+const quizOptionsEl = document.getElementById("quiz-options");
+const quizFeedbackEl = document.getElementById("quiz-feedback");
+const quizRestartButtonEl = document.getElementById("quiz-restart-btn");
 const pdfFileEl = document.getElementById("pdf-file");
 const extractPdfButtonEl = document.getElementById("extract-pdf-btn");
 const pdfMessageEl = document.getElementById("pdf-message");
@@ -36,10 +53,14 @@ let isGeneratingNotes = false;
 let isExtractingPdf = false;
 let isExportingPdf = false;
 let isGeneratingFlashcards = false;
+let isGeneratingQuiz = false;
 let latestNotesResponse = null;
 let latestFlashcardsResponse = null;
+let latestQuizResponse = null;
 let flashcardIndex = 0;
 let flashcardsAreFlipped = false;
+let quizIndex = 0;
+let quizQuestionStates = [];
 
 function setStatus(state, message) {
   statusTextEl.dataset.state = state;
@@ -81,6 +102,7 @@ function updateNotesUtilityButtons() {
   copyNotesButtonEl.disabled = !hasGeneratedNotes;
   exportPdfButtonEl.disabled = !hasGeneratedNotes || isExportingPdf;
   generateFlashcardsButtonEl.disabled = !hasGeneratedNotes || isGeneratingFlashcards;
+  generateQuizButtonEl.disabled = !hasGeneratedNotes || isGeneratingQuiz;
 }
 
 function buildNotesPayload() {
@@ -464,6 +486,269 @@ async function handleGenerateFlashcards() {
   }
 }
 
+function setQuizMessage(state, message) {
+  quizMessageEl.dataset.state = state;
+  quizMessageEl.textContent = message;
+}
+
+function getQuizStats() {
+  const total = latestQuizResponse && Array.isArray(latestQuizResponse.questions)
+    ? latestQuizResponse.questions.length
+    : 0;
+  const submittedCount = quizQuestionStates.filter((state) => state?.isSubmitted).length;
+  const correctCount = quizQuestionStates.filter((state) => state?.isSubmitted && state?.isCorrect).length;
+  const incorrectCount = submittedCount - correctCount;
+
+  return {
+    total,
+    submittedCount,
+    correctCount,
+    incorrectCount,
+    percentage: total > 0 ? Math.round((correctCount / total) * 100) : 0,
+  };
+}
+
+function updateQuizScoreDisplay() {
+  const stats = getQuizStats();
+  quizScoreEl.textContent = `Score: ${stats.correctCount} / ${stats.total}`;
+}
+
+function updateQuizSummary() {
+  const stats = getQuizStats();
+  const isCompleted = stats.total > 0 && stats.submittedCount === stats.total;
+
+  quizSummaryEl.hidden = !isCompleted;
+
+  if (!isCompleted) {
+    return;
+  }
+
+  quizSummaryScoreEl.textContent = `You scored ${stats.correctCount} out of ${stats.total} (${stats.percentage}%).`;
+  quizSummaryDetailsEl.textContent = `Answered: ${stats.submittedCount}/${stats.total} • Correct: ${stats.correctCount} • Incorrect: ${stats.incorrectCount}`;
+}
+
+function resetQuizView() {
+  quizIndex = 0;
+  quizFeedbackEl.textContent = "";
+  quizFeedbackEl.dataset.state = "idle";
+  quizSubmitButtonEl.disabled = true;
+  quizPrevButtonEl.disabled = true;
+  quizNextButtonEl.disabled = false;
+  quizSummaryEl.hidden = true;
+  quizSummaryScoreEl.textContent = "";
+  quizSummaryDetailsEl.textContent = "";
+  updateQuizScoreDisplay();
+  // Ensure question UI is visible on reset
+  if (quizCardEl) quizCardEl.hidden = false;
+  if (quizControlsEl) quizControlsEl.hidden = false;
+}
+
+function renderQuizResponse(response) {
+  latestQuizResponse = response;
+  quizOutputEl.hidden = false;
+
+  if (!Array.isArray(response.questions) || response.questions.length === 0) {
+    quizQuestionStates = [];
+    quizQuestionEl.textContent = "No quiz questions available.";
+    quizOptionsEl.replaceChildren();
+    quizProgressEl.textContent = "0 / 0";
+    quizScoreEl.textContent = "Score: 0 / 0";
+    quizSummaryEl.hidden = true;
+    quizSummaryScoreEl.textContent = "";
+    quizSummaryDetailsEl.textContent = "";
+    quizPrevButtonEl.disabled = true;
+    quizNextButtonEl.disabled = true;
+    quizSubmitButtonEl.disabled = true;
+    return;
+  }
+
+  quizQuestionStates = response.questions.map(() => ({
+    selectedAnswer: null,
+    submittedAnswer: null,
+    isCorrect: null,
+    explanation: "",
+    isSubmitted: false,
+  }));
+
+  resetQuizView();
+  updateQuizView();
+}
+
+function updateQuizView() {
+  if (!latestQuizResponse || !Array.isArray(latestQuizResponse.questions)) {
+    return;
+  }
+
+  const questions = latestQuizResponse.questions;
+  const total = questions.length;
+
+  if (quizIndex < 0) {
+    quizIndex = 0;
+  }
+
+  if (quizIndex >= total) {
+    quizIndex = total - 1;
+  }
+
+  const stats = getQuizStats();
+  const isCompleted = stats.total > 0 && stats.submittedCount === stats.total;
+
+  // When the quiz is complete, hide the question UI and controls and show only the summary
+  if (isCompleted) {
+    if (quizCardEl) quizCardEl.hidden = true;
+    if (quizControlsEl) quizControlsEl.hidden = true;
+    updateQuizScoreDisplay();
+    updateQuizSummary();
+    return;
+  }
+
+  // Ensure question UI is visible when not complete
+  if (quizCardEl) quizCardEl.hidden = false;
+  if (quizControlsEl) quizControlsEl.hidden = false;
+
+  const question = questions[quizIndex];
+  const questionState = quizQuestionStates[quizIndex];
+  quizQuestionEl.textContent = question.question;
+  quizOptionsEl.replaceChildren();
+  question.options.forEach((option) => {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "quiz-option-btn";
+    button.textContent = option;
+    button.disabled = Boolean(questionState?.isSubmitted);
+
+    if (questionState?.isSubmitted) {
+      button.classList.toggle("selected", questionState.submittedAnswer === option);
+      button.classList.toggle("correct", question.correct_answer === option);
+      button.classList.toggle("incorrect", questionState.submittedAnswer === option && !questionState.isCorrect);
+    } else {
+      button.classList.toggle("selected", questionState?.selectedAnswer === option);
+    }
+
+    button.addEventListener("click", () => {
+      if (questionState?.isSubmitted) {
+        return;
+      }
+
+      questionState.selectedAnswer = option;
+      Array.from(quizOptionsEl.children).forEach((child) => {
+        child.classList.toggle("selected", child.textContent === option);
+      });
+      quizSubmitButtonEl.disabled = false;
+      quizFeedbackEl.textContent = "";
+      quizFeedbackEl.dataset.state = "idle";
+    });
+    quizOptionsEl.appendChild(button);
+  });
+  quizProgressEl.textContent = `${quizIndex + 1} / ${total}`;
+  quizPrevButtonEl.disabled = quizIndex === 0;
+  quizNextButtonEl.disabled = quizIndex >= total - 1;
+  updateQuizScoreDisplay();
+
+  if (questionState?.isSubmitted) {
+    const explanation = questionState.explanation || "No explanation provided.";
+    const feedback = questionState.isCorrect
+      ? `Correct! ${explanation}`
+      : `Incorrect. The correct answer is "${question.correct_answer}". ${explanation}`;
+    quizFeedbackEl.dataset.state = questionState.isCorrect ? "success" : "error";
+    quizFeedbackEl.textContent = feedback;
+    quizSubmitButtonEl.disabled = true;
+  } else {
+    quizFeedbackEl.textContent = "";
+    quizFeedbackEl.dataset.state = "idle";
+    quizSubmitButtonEl.disabled = !questionState?.selectedAnswer;
+  }
+
+  updateQuizSummary();
+}
+
+function handleQuizPrevious() {
+  if (quizIndex > 0) {
+    quizIndex -= 1;
+    updateQuizView();
+  }
+}
+
+function handleQuizNext() {
+  if (!latestQuizResponse || !Array.isArray(latestQuizResponse.questions)) {
+    return;
+  }
+
+  if (quizIndex < latestQuizResponse.questions.length - 1) {
+    quizIndex += 1;
+    updateQuizView();
+  }
+}
+
+function handleQuizSubmit() {
+  if (!latestQuizResponse || !Array.isArray(latestQuizResponse.questions)) {
+    return;
+  }
+
+  const question = latestQuizResponse.questions[quizIndex];
+  const questionState = quizQuestionStates[quizIndex];
+  if (!questionState || questionState.isSubmitted || !questionState.selectedAnswer) {
+    return;
+  }
+
+  questionState.submittedAnswer = questionState.selectedAnswer;
+  questionState.isCorrect = questionState.submittedAnswer === question.correct_answer;
+  questionState.explanation = question.explanation;
+  questionState.isSubmitted = true;
+  updateQuizView();
+}
+
+function handleQuizRestart() {
+  if (!latestQuizResponse || !Array.isArray(latestQuizResponse.questions)) {
+    return;
+  }
+
+  quizQuestionStates = latestQuizResponse.questions.map(() => ({
+    selectedAnswer: null,
+    submittedAnswer: null,
+    isCorrect: null,
+    explanation: "",
+    isSubmitted: false,
+  }));
+  quizIndex = 0;
+  updateQuizView();
+}
+
+async function handleGenerateQuiz() {
+  if (!latestNotesResponse || isGeneratingQuiz) {
+    return;
+  }
+
+  isGeneratingQuiz = true;
+  latestQuizResponse = null;
+  quizQuestionStates = [];
+  quizIndex = 0;
+  quizOutputEl.hidden = true;
+  quizQuestionEl.textContent = "No quiz yet.";
+  quizOptionsEl.replaceChildren();
+  quizProgressEl.textContent = "0 / 0";
+  quizFeedbackEl.textContent = "";
+  quizFeedbackEl.dataset.state = "idle";
+  quizSubmitButtonEl.disabled = true;
+  quizScoreEl.textContent = "Score: 0 / 0";
+  quizSummaryEl.hidden = true;
+  quizSummaryScoreEl.textContent = "";
+  quizSummaryDetailsEl.textContent = "";
+  generateQuizButtonEl.disabled = true;
+  setQuizMessage("loading", "Generating quiz...");
+
+  try {
+    const response = await generateQuiz(latestNotesResponse);
+    renderQuizResponse(response);
+    setQuizMessage("success", "Quiz generated successfully.");
+  } catch (error) {
+    setQuizMessage("error", error.message || "Could not generate quiz.");
+  } finally {
+    isGeneratingQuiz = false;
+    updateNotesUtilityButtons();
+  }
+}
+
 function setPdfMessage(state, message) {
   pdfMessageEl.dataset.state = state;
   pdfMessageEl.textContent = message;
@@ -516,7 +801,12 @@ extractPdfButtonEl.addEventListener("click", handleExtractPdf);
 copyNotesButtonEl.addEventListener("click", handleCopyNotes);
 exportPdfButtonEl.addEventListener("click", handleExportPdf);
 generateFlashcardsButtonEl.addEventListener("click", handleGenerateFlashcards);
+generateQuizButtonEl.addEventListener("click", handleGenerateQuiz);
 flashcardPrevButtonEl.addEventListener("click", handleFlashcardPrevious);
 flashcardNextButtonEl.addEventListener("click", handleFlashcardNext);
 flashcardFlipButtonEl.addEventListener("click", handleFlashcardFlip);
+quizPrevButtonEl.addEventListener("click", handleQuizPrevious);
+quizNextButtonEl.addEventListener("click", handleQuizNext);
+quizSubmitButtonEl.addEventListener("click", handleQuizSubmit);
+quizRestartButtonEl.addEventListener("click", handleQuizRestart);
 updateNotesUtilityButtons();

@@ -129,12 +129,14 @@ button:focus {
   margin-top: 12px;
 }
 
-#flashcards-message[data-state="success"] {
+#flashcards-message[data-state="success"],
+#quiz-message[data-state="success"] {
   color: #1a7f37;
   font-weight: 600;
 }
 
-#flashcards-message[data-state="error"] {
+#flashcards-message[data-state="error"],
+#quiz-message[data-state="error"] {
   color: #c0392b;
   font-weight: 600;
 }
@@ -167,6 +169,54 @@ dt {
 
 dd {
   margin: 0 0 10px;
+}
+
+.quiz-score {
+  font-weight: 600;
+  margin: 8px 0 0;
+}
+
+.quiz-summary {
+  border: 1px solid #d0d0d5;
+  border-radius: 8px;
+  padding: 12px 14px;
+  margin-top: 12px;
+  background: #f7f7f8;
+}
+
+.quiz-option-btn {
+  display: block;
+  width: 100%;
+  text-align: left;
+  margin-top: 8px;
+  background: #ffffff;
+  color: #1d1d1f;
+  border: 1px solid #d0d0d5;
+}
+
+.quiz-option-btn.selected {
+  background: #dceeff;
+  border-color: #4c7ef3;
+}
+
+.quiz-option-btn.correct {
+  background: #e8f7ed;
+  border-color: #1a7f37;
+}
+
+.quiz-option-btn.incorrect {
+  background: #fdecea;
+  border-color: #c0392b;
+}
+
+#quiz-feedback[data-state="success"] {
+  color: #1a7f37;
+  font-weight: 600;
+}
+
+#quiz-feedback[data-state="error"] {
+  color: #c0392b;
+  font-weight: 600;
 }
 
 @media (max-width: 700px) {

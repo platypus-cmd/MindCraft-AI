@@ -100,3 +100,21 @@ async function generateFlashcards(notesResponse) {
 
   return data;
 }
+
+async function generateQuiz(notesResponse) {
+  const response = await fetch(`${API_BASE_URL}/api/v1/quiz/generate`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ notes_response: notesResponse }),
+  });
+
+  const data = await response.json().catch(() => ({}));
+
+  if (!response.ok) {
+    throw new Error(data.detail || "Quiz generation failed.");
+  }
+
+  return data;
+}
