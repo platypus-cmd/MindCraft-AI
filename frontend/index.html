@@ -20,6 +20,13 @@
     <section id="notes-workspace" aria-labelledby="notes-heading">
       <h2 id="notes-heading">Generate Notes</h2>
 
+      <div id="pdf-upload">
+        <label for="pdf-file">Or upload a PDF to extract text from</label>
+        <input id="pdf-file" name="pdf_file" type="file" accept="application/pdf" />
+        <button id="extract-pdf-btn" type="button">Extract Text</button>
+        <p id="pdf-message" data-state="idle"></p>
+      </div>
+
       <form id="notes-form">
         <label for="source-text">Source material</label>
         <textarea

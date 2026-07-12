@@ -1,6 +1,10 @@
 import unittest
 
 from pydantic import ValidationError
+from app.core.constants import (
+    NOTES_SOURCE_TEXT_MAX_CHARACTERS,
+    NOTES_SOURCE_TEXT_MIN_CHARACTERS,
+)
 
 from app.schemas.notes import NotesRequest
 
@@ -54,6 +58,34 @@ class NotesRequestValidationTests(unittest.TestCase):
 
     def test_unsupported_output_format_is_rejected(self):
         self.assert_invalid_payload(output_format="markdown")
+
+    def test_source_text_validation_uses_shared_limits(self):
+        minimum_request = NotesRequest(
+            **valid_payload(
+                source_text="a" * NOTES_SOURCE_TEXT_MIN_CHARACTERS
+            )
+        )
+        maximum_request = NotesRequest(
+            **valid_payload(
+                source_text="a" * NOTES_SOURCE_TEXT_MAX_CHARACTERS
+            )
+        )
+
+        self.assertEqual(
+            len(minimum_request.source_text),
+            NOTES_SOURCE_TEXT_MIN_CHARACTERS,
+        )
+        self.assertEqual(
+            len(maximum_request.source_text),
+            NOTES_SOURCE_TEXT_MAX_CHARACTERS,
+        )
+
+        self.assert_invalid_payload(
+            source_text="a" * (NOTES_SOURCE_TEXT_MIN_CHARACTERS - 1)
+        )
+        self.assert_invalid_payload(
+            source_text="a" * (NOTES_SOURCE_TEXT_MAX_CHARACTERS + 1)
+        )
 
 
 if __name__ == "__main__":

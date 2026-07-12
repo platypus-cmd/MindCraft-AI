@@ -42,3 +42,26 @@ async function generateNotes(payload) {
 
   return data;
 }
+
+/**
+ * Uploads a PDF file and returns extracted text.
+ * Uses FormData so the browser sets the correct multipart boundary itself;
+ * the Content-Type header must not be set manually here.
+ */
+async function extractPdfText(file) {
+  const formData = new FormData();
+  formData.append("file", file);
+
+  const response = await fetch(`${API_BASE_URL}/api/v1/documents/extract`, {
+    method: "POST",
+    body: formData,
+  });
+
+  const data = await response.json().catch(() => ({}));
+
+  if (!response.ok) {
+    throw new Error(data.detail || "PDF text extraction failed.");
+  }
+
+  return data;
+}

@@ -1747,13 +1747,142 @@ If stricter source faithfulness becomes necessary, introduce a more robust groun
 
 Any such change must preserve the simple Version 1 architecture unless a genuine implementation need justifies additional complexity.
 
+# 39. Milestone 3 Implementation Record
+
+Milestone 3 adds PDF input as an isolated document-extraction vertical slice while preserving the existing Notes generation workflow.
+
+## 39.1 Milestone 3 Scope
+
+Milestone 3 implements:
+
+* PDF upload support.
+* In-memory PDF text extraction.
+* A dedicated document-extraction API endpoint.
+* Validation for empty, oversized, invalid, malformed, encrypted, no-text, too-short, and too-long PDF inputs.
+* Shared Notes source-text limits used by both Notes request validation and document extraction.
+* Frontend PDF upload and explicit Extract Text controls.
+* Population of the existing source-text textarea with extracted PDF text.
+* An overwrite confirmation guard when source text already exists.
+* Automated service-level and endpoint-level tests.
+* Manual API and frontend verification.
+
+Milestone 3 does not add:
+
+* OCR support.
+* Image-based or scanned-PDF text recognition.
+* File persistence.
+* Database storage.
+* Cloud object storage.
+* Automatic Notes generation after extraction.
+* Gemini calls during document extraction.
+* Additional document formats.
+
+## 39.2 Backend Architecture
+
+PDF extraction is isolated behind the document service.
+
+The backend flow is:
+
+`POST /api/v1/documents/extract -> documents route -> document service -> pypdf -> DocumentExtractResponse`
+
+The endpoint accepts a multipart upload using the field name `file`.
+
+Successful extraction returns:
+
+* `extracted_text`
+* `character_count`
+* `page_count`
+
+PDF processing is entirely in memory.
+
+Uploaded PDF bytes and extracted text are not persisted to disk, a database, or external storage.
+
+The document-extraction workflow does not call Gemini.
+
+## 39.3 Dependencies and Configuration
+
+Milestone 3 adds:
+
+* `pypdf`
+* `python-multipart`
+
+The maximum accepted PDF upload size is configured as 10 MiB through `max_pdf_size_bytes`.
+
+The service performs a bounded read of at most `max_pdf_size_bytes + 1` bytes so oversized uploads can be rejected without reading an arbitrarily large file into memory.
+
+## 39.4 Shared Notes Source-Text Limits
+
+The Notes workflow accepts source text from 50 through 20,000 characters.
+
+These limits are defined once in `backend/app/core/constants.py`.
+
+The shared constants are used by `NotesRequest.source_text` validation and PDF extraction compatibility validation, preventing duplicated limits from drifting out of sync.
+
+## 39.5 PDF Validation and Error Behavior
+
+The document service validates empty uploads, oversized uploads, invalid PDF signatures, malformed PDFs, encrypted PDFs, PDFs with no extractable text, and extracted text outside the Notes workflow limits.
+
+Expected PDF parser failures are converted into document-domain errors.
+
+Unexpected programming errors are not swallowed by broad exception handling and propagate through normal application error handling.
+
+Client-facing error responses are sanitized and do not expose raw parser exceptions, stack traces, file bytes, extracted source text, filenames, or internal implementation details.
+
+## 39.6 Frontend Integration
+
+The Notes workspace includes a PDF file input, an explicit Extract Text button, and a PDF extraction status message.
+
+Selecting a PDF does not automatically upload, extract, or generate notes.
+
+Extraction occurs only after the user clicks Extract Text.
+
+The frontend uses `FormData` and allows the browser to set the multipart boundary.
+
+Existing source text is protected by an overwrite confirmation guard.
+
+Successful extraction populates the existing source-text textarea.
+
+Frontend rendering uses safe text/value assignment rather than `innerHTML`.
+
+## 39.7 Testing and Verification
+
+**Automated test result: 54 tests passing.**
+
+Milestone 3 adds service-level and endpoint-level document-extraction tests while preserving the Milestone 1 and Milestone 2 regression suite.
+
+Automated coverage includes successful extraction, page ordering and formatting, metadata correctness, upload-size enforcement, invalid and malformed PDFs, encrypted PDFs, no-text PDFs, Notes text-limit compatibility, HTTP error mappings, sanitized responses, unexpected-error propagation, and shared-limit consistency.
+
+Additional manual verification completed:
+
+* Application import succeeds.
+* `GET /api/v1/health` succeeds.
+* The document extraction endpoint appears in FastAPI API documentation.
+* A real text-based PDF upload succeeds with HTTP 200.
+* The response contains extracted text, character count, and page count.
+* A non-PDF upload is rejected with HTTP 422.
+* Frontend PDF extraction succeeds.
+* Extracted text populates the existing source-text textarea.
+* PDF extraction does not automatically generate notes.
+* The overwrite guard works for both Cancel and confirmation paths.
+* Git whitespace checks passed for the 15-file implementation snapshot.
+
+## 39.8 Known Limitations
+
+Milestone 3 supports text-based PDFs only.
+
+Scanned and image-only PDFs are rejected when no extractable text is available because Version 1 does not include OCR.
+
+PDF extraction may preserve line breaks, hyphenation, or other formatting artifacts produced by the source PDF and `pypdf`.
+
+No file content or extracted text is persisted.
+
 ## 38.7 Milestone Plan Status
 
 Current milestone status:
 
 * Milestone 1 â€” Foundation: **Complete**
 * Milestone 2 â€” Notes Vertical Slice: **Complete**
-* Milestone 3 â€” PDF Input: **Not Started**
+* Milestone 3 â€” PDF Input: **Complete**
 * Milestone 4 â€” Notes Utilities: **Not Started, with reading time completed early during Milestone 2**
 * Milestone 5 â€” Flashcards: **Not Started**
 * Milestone 6 â€” Quiz: **Not Started**
@@ -1762,7 +1891,7 @@ Current milestone status:
 * Milestone 9 â€” Deployment: **Not Started**
 * Milestone 10 â€” Documentation: **Not Started**
 
-Milestone 3 has not started.
+Milestone 3 is complete.
 
 Do not implement Milestone 3 functionality as part of documentation maintenance.
 

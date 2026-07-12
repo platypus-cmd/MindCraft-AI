@@ -16,8 +16,12 @@ const generateNotesButtonEl = document.getElementById("generate-notes-btn");
 const notesOutputEl = document.getElementById("notes-output");
 const notesMetaEl = document.getElementById("notes-meta");
 const notesContentEl = document.getElementById("notes-content");
+const pdfFileEl = document.getElementById("pdf-file");
+const extractPdfButtonEl = document.getElementById("extract-pdf-btn");
+const pdfMessageEl = document.getElementById("pdf-message");
 
 let isGeneratingNotes = false;
+let isExtractingPdf = false;
 
 function setStatus(state, message) {
   statusTextEl.dataset.state = state;
@@ -189,5 +193,52 @@ async function handleGenerateNotes(event) {
   }
 }
 
+function setPdfMessage(state, message) {
+  pdfMessageEl.dataset.state = state;
+  pdfMessageEl.textContent = message;
+}
+
+async function handleExtractPdf() {
+  if (isExtractingPdf) {
+    return;
+  }
+
+  const file = pdfFileEl.files[0];
+
+  if (!file) {
+    setPdfMessage("error", "Choose a PDF file first.");
+    return;
+  }
+
+  if (sourceTextEl.value.trim().length > 0) {
+    const shouldOverwrite = window.confirm(
+      "This will replace the text currently in the source material box. Continue?"
+    );
+
+    if (!shouldOverwrite) {
+      return;
+    }
+  }
+
+  isExtractingPdf = true;
+  extractPdfButtonEl.disabled = true;
+  setPdfMessage("loading", "Extracting text from PDF...");
+
+  try {
+    const result = await extractPdfText(file);
+    sourceTextEl.value = result.extracted_text;
+    setPdfMessage(
+      "success",
+      `Extracted ${result.character_count} characters from ${result.page_count} page(s). Review the text below, then click Generate Notes.`
+    );
+  } catch (error) {
+    setPdfMessage("error", error.message || "Could not extract text from that PDF.");
+  } finally {
+    isExtractingPdf = false;
+    extractPdfButtonEl.disabled = false;
+  }
+}
+
 checkButtonEl.addEventListener("click", handleCheckConnection);
 notesFormEl.addEventListener("submit", handleGenerateNotes);
+extractPdfButtonEl.addEventListener("click", handleExtractPdf);

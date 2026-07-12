@@ -4,6 +4,11 @@ from enum import Enum
 
 from pydantic import BaseModel, Field, field_validator
 
+from app.core.constants import (
+    NOTES_SOURCE_TEXT_MAX_CHARACTERS,
+    NOTES_SOURCE_TEXT_MIN_CHARACTERS,
+)
+
 
 class LearningGoal(str, Enum):
     ACADEMIC = "academic"
@@ -32,7 +37,10 @@ class OutputFormat(str, Enum):
 
 
 class NotesRequest(BaseModel):
-    source_text: str = Field(min_length=50, max_length=20_000)
+    source_text: str = Field(
+        min_length=NOTES_SOURCE_TEXT_MIN_CHARACTERS,
+        max_length=NOTES_SOURCE_TEXT_MAX_CHARACTERS,
+    )
     learning_goal: LearningGoal
     knowledge_level: KnowledgeLevel
     note_length: NoteLength

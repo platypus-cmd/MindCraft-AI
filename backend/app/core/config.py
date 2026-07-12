@@ -27,6 +27,10 @@ class Settings(BaseSettings):
     gemini_model: str = "gemini-2.5-flash"
     gemini_timeout_seconds: float = 30.0
 
+    # Document (PDF) upload settings. See PROJECT_CONTEXT.md Section 22
+    # ("enforce reasonable limits on...PDF file size").
+    max_pdf_size_bytes: int = 10 * 1024 * 1024  # 10 MB
+
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",
