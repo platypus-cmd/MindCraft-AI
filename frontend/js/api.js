@@ -118,3 +118,39 @@ async function generateQuiz(notesResponse) {
 
   return data;
 }
+
+async function generateRevision(payload) {
+  const response = await fetch(`${API_BASE_URL}/api/v1/revision/generate`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(payload),
+  });
+
+  const data = await response.json().catch(() => ({}));
+
+  if (!response.ok) {
+    throw new Error(data.detail || "Revision generation failed.");
+  }
+
+  return data;
+}
+
+async function generateRetest(payload) {
+  const response = await fetch(`${API_BASE_URL}/api/v1/quizzes/retest`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(payload),
+  });
+
+  const data = await response.json().catch(() => ({}));
+
+  if (!response.ok) {
+    throw new Error(data.detail || "Retest generation failed.");
+  }
+
+  return data;
+}

@@ -41,10 +41,17 @@ const quizScoreEl = document.getElementById("quiz-score");
 const quizSummaryEl = document.getElementById("quiz-summary");
 const quizSummaryScoreEl = document.getElementById("quiz-summary-score");
 const quizSummaryDetailsEl = document.getElementById("quiz-summary-details");
+const quizIncorrectReviewEl = document.getElementById("quiz-incorrect-review");
+const quizWeakConceptsEl = document.getElementById("quiz-weak-concepts");
+const teachWeakTopicsButtonEl = document.getElementById("teach-weak-topics-btn");
 const quizQuestionEl = document.getElementById("quiz-question");
 const quizOptionsEl = document.getElementById("quiz-options");
 const quizFeedbackEl = document.getElementById("quiz-feedback");
 const quizRestartButtonEl = document.getElementById("quiz-restart-btn");
+const revisionOutputEl = document.getElementById("revision-output");
+const revisionMessageEl = document.getElementById("revision-message");
+const revisionContentEl = document.getElementById("revision-content");
+const generateRetestButtonEl = document.getElementById("generate-retest-btn");
 const pdfFileEl = document.getElementById("pdf-file");
 const extractPdfButtonEl = document.getElementById("extract-pdf-btn");
 const pdfMessageEl = document.getElementById("pdf-message");
@@ -54,13 +61,91 @@ let isExtractingPdf = false;
 let isExportingPdf = false;
 let isGeneratingFlashcards = false;
 let isGeneratingQuiz = false;
+let isGeneratingRevision = false;
+let isGeneratingRetest = false;
 let latestNotesResponse = null;
 let latestFlashcardsResponse = null;
 let latestQuizResponse = null;
+let originalQuizResponse = null;
+let originalQuizQuestionStates = [];
+let originalQuizResult = null;
+let weakConcepts = [];
+let incorrectQuestionContexts = [];
+let latestRevisionResponse = null;
+let latestRetestResponse = null;
+let retestQuestionStates = [];
+let retestResult = null;
+let currentQuizMode = "original";
 let flashcardIndex = 0;
 let flashcardsAreFlipped = false;
 let quizIndex = 0;
 let quizQuestionStates = [];
+
+function createEmptyQuizStates(response) {
+  if (!response || !Array.isArray(response.questions)) {
+    return [];
+  }
+
+  return response.questions.map(() => ({
+    selectedAnswer: null,
+    submittedAnswer: null,
+    isCorrect: null,
+    explanation: "",
+    isSubmitted: false,
+  }));
+}
+
+function getActiveQuizResponse() {
+  return currentQuizMode === "retest" ? latestRetestResponse : originalQuizResponse;
+}
+
+function getActiveQuizStates() {
+  return currentQuizMode === "retest" ? retestQuestionStates : originalQuizQuestionStates;
+}
+
+function setActiveQuizStates(states) {
+  if (currentQuizMode === "retest") {
+    retestQuestionStates = states;
+  } else {
+    originalQuizQuestionStates = states;
+  }
+
+  latestQuizResponse = getActiveQuizResponse();
+  quizQuestionStates = states;
+}
+
+function syncActiveQuizState() {
+  latestQuizResponse = getActiveQuizResponse();
+  quizQuestionStates = getActiveQuizStates();
+}
+
+function normalizeForComparison(value) {
+  return String(value || "").trim().toLowerCase();
+}
+
+function clearAdaptiveCycleState() {
+  originalQuizResult = null;
+  weakConcepts = [];
+  incorrectQuestionContexts = [];
+  latestRevisionResponse = null;
+  latestRetestResponse = null;
+  retestQuestionStates = [];
+  retestResult = null;
+  isGeneratingRevision = false;
+  isGeneratingRetest = false;
+  currentQuizMode = "original";
+
+  quizIncorrectReviewEl.replaceChildren();
+  quizWeakConceptsEl.replaceChildren();
+  teachWeakTopicsButtonEl.hidden = true;
+  teachWeakTopicsButtonEl.disabled = false;
+  revisionOutputEl.hidden = true;
+  revisionContentEl.replaceChildren();
+  revisionMessageEl.textContent = "";
+  revisionMessageEl.dataset.state = "idle";
+  generateRetestButtonEl.hidden = true;
+  generateRetestButtonEl.disabled = false;
+}
 
 function setStatus(state, message) {
   statusTextEl.dataset.state = state;
@@ -508,6 +593,40 @@ function getQuizStats() {
   };
 }
 
+function extractWeakConcepts() {
+  const weak = [];
+  const seen = new Set();
+  const incorrectContexts = [];
+
+  const response = originalQuizResponse;
+  const states = originalQuizQuestionStates;
+
+  if (!response || !states) return { weak, incorrectContexts };
+
+  for (let i = 0; i < response.questions.length; i++) {
+    const q = response.questions[i];
+    const s = states[i];
+
+    if (q && s && s.isSubmitted && !s.isCorrect) {
+      incorrectContexts.push({
+        concept: q.concept,
+        question: q.question,
+        selected_answer: s.submittedAnswer,
+        correct_answer: q.correct_answer,
+        explanation: q.explanation
+      });
+
+      const key = (q.concept || "").trim().toLowerCase();
+      if (key && !seen.has(key)) {
+        seen.add(key);
+        weak.push((q.concept || "").trim());
+      }
+    }
+  }
+
+  return { weak, incorrectContexts };
+}
+
 function updateQuizScoreDisplay() {
   const stats = getQuizStats();
   quizScoreEl.textContent = `Score: ${stats.correctCount} / ${stats.total}`;
@@ -524,7 +643,61 @@ function updateQuizSummary() {
   }
 
   quizSummaryScoreEl.textContent = `You scored ${stats.correctCount} out of ${stats.total} (${stats.percentage}%).`;
-  quizSummaryDetailsEl.textContent = `Answered: ${stats.submittedCount}/${stats.total} • Correct: ${stats.correctCount} • Incorrect: ${stats.incorrectCount}`;
+  quizSummaryDetailsEl.textContent = `Answered: ${stats.submittedCount}/${stats.total} | Correct: ${stats.correctCount} | Incorrect: ${stats.incorrectCount}`;
+
+  quizIncorrectReviewEl.replaceChildren();
+  quizWeakConceptsEl.replaceChildren();
+
+  const response = getActiveQuizResponse();
+  const states = getActiveQuizStates();
+
+  const incorrectQuestions = [];
+  if (response && Array.isArray(response.questions) && Array.isArray(states)) {
+    for (let i = 0; i < response.questions.length; i++) {
+      const q = response.questions[i];
+      const s = states[i];
+      if (q && s && s.isSubmitted && !s.isCorrect) {
+         incorrectQuestions.push({q, s});
+      }
+    }
+  }
+
+  if (incorrectQuestions.length > 0) {
+    appendTextElement(quizIncorrectReviewEl, "h4", "Incorrect Answer Review");
+    incorrectQuestions.forEach(({q, s}) => {
+       const div = document.createElement("div");
+       div.className = "incorrect-review-item";
+       appendTextElement(div, "p", `Question: ${q.question}`);
+       appendTextElement(div, "p", `Your Answer: ${s.submittedAnswer}`);
+       appendTextElement(div, "p", `Correct Answer: ${q.correct_answer}`);
+       appendTextElement(div, "p", `Explanation: ${q.explanation}`);
+       appendTextElement(div, "p", `Concept: ${q.concept}`);
+       quizIncorrectReviewEl.appendChild(div);
+    });
+  }
+
+  if (currentQuizMode === "original") {
+    const extracted = extractWeakConcepts();
+    weakConcepts = extracted.weak;
+    incorrectQuestionContexts = extracted.incorrectContexts;
+
+    if (weakConcepts.length > 0) {
+      appendTextElement(quizWeakConceptsEl, "h4", "Weak Concepts Identified");
+      const ul = document.createElement("ul");
+      weakConcepts.forEach(c => {
+         appendTextElement(ul, "li", c);
+      });
+      quizWeakConceptsEl.appendChild(ul);
+
+      teachWeakTopicsButtonEl.hidden = false;
+    } else {
+      appendTextElement(quizWeakConceptsEl, "p", "Great job! No weak concepts identified.");
+      teachWeakTopicsButtonEl.hidden = true;
+    }
+  } else {
+    teachWeakTopicsButtonEl.hidden = true;
+    generateRetestButtonEl.hidden = true;
+  }
 }
 
 function resetQuizView() {
@@ -537,8 +710,9 @@ function resetQuizView() {
   quizSummaryEl.hidden = true;
   quizSummaryScoreEl.textContent = "";
   quizSummaryDetailsEl.textContent = "";
+  quizIncorrectReviewEl.replaceChildren();
+  quizWeakConceptsEl.replaceChildren();
   updateQuizScoreDisplay();
-  // Ensure question UI is visible on reset
   if (quizCardEl) quizCardEl.hidden = false;
   if (quizControlsEl) quizControlsEl.hidden = false;
 }
@@ -546,8 +720,9 @@ function resetQuizView() {
 function renderQuizResponse(response) {
   latestQuizResponse = response;
   quizOutputEl.hidden = false;
+  document.getElementById("quiz-heading").textContent = currentQuizMode === "retest" ? "Retest" : "Quiz";
 
-  if (!Array.isArray(response.questions) || response.questions.length === 0) {
+  if (!response || !Array.isArray(response.questions) || response.questions.length === 0) {
     quizQuestionStates = [];
     quizQuestionEl.textContent = "No quiz questions available.";
     quizOptionsEl.replaceChildren();
@@ -559,16 +734,15 @@ function renderQuizResponse(response) {
     quizPrevButtonEl.disabled = true;
     quizNextButtonEl.disabled = true;
     quizSubmitButtonEl.disabled = true;
+    quizIncorrectReviewEl.replaceChildren();
+    quizWeakConceptsEl.replaceChildren();
+    teachWeakTopicsButtonEl.hidden = true;
+    revisionOutputEl.hidden = true;
+    generateRetestButtonEl.hidden = true;
+    if (quizCardEl) quizCardEl.hidden = false;
+    if (quizControlsEl) quizControlsEl.hidden = false;
     return;
   }
-
-  quizQuestionStates = response.questions.map(() => ({
-    selectedAnswer: null,
-    submittedAnswer: null,
-    isCorrect: null,
-    explanation: "",
-    isSubmitted: false,
-  }));
 
   resetQuizView();
   updateQuizView();
@@ -699,18 +873,21 @@ function handleQuizSubmit() {
 }
 
 function handleQuizRestart() {
-  if (!latestQuizResponse || !Array.isArray(latestQuizResponse.questions)) {
-    return;
+  quizIndex = 0;
+
+  if (currentQuizMode === "retest") {
+    retestQuestionStates = createEmptyQuizStates(latestRetestResponse);
+    syncActiveQuizState();
+  } else {
+    clearAdaptiveCycleState();
+    currentQuizMode = "original";
+    originalQuizQuestionStates = createEmptyQuizStates(originalQuizResponse);
+    syncActiveQuizState();
   }
 
-  quizQuestionStates = latestQuizResponse.questions.map(() => ({
-    selectedAnswer: null,
-    submittedAnswer: null,
-    isCorrect: null,
-    explanation: "",
-    isSubmitted: false,
-  }));
-  quizIndex = 0;
+  document.getElementById("quiz-heading").textContent = currentQuizMode === "retest" ? "Retest" : "Quiz";
+
+  resetQuizView();
   updateQuizView();
 }
 
@@ -720,32 +897,138 @@ async function handleGenerateQuiz() {
   }
 
   isGeneratingQuiz = true;
-  latestQuizResponse = null;
-  quizQuestionStates = [];
-  quizIndex = 0;
-  quizOutputEl.hidden = true;
-  quizQuestionEl.textContent = "No quiz yet.";
-  quizOptionsEl.replaceChildren();
-  quizProgressEl.textContent = "0 / 0";
-  quizFeedbackEl.textContent = "";
-  quizFeedbackEl.dataset.state = "idle";
-  quizSubmitButtonEl.disabled = true;
-  quizScoreEl.textContent = "Score: 0 / 0";
-  quizSummaryEl.hidden = true;
-  quizSummaryScoreEl.textContent = "";
-  quizSummaryDetailsEl.textContent = "";
   generateQuizButtonEl.disabled = true;
   setQuizMessage("loading", "Generating quiz...");
 
   try {
     const response = await generateQuiz(latestNotesResponse);
+
+    if (!response || !Array.isArray(response.questions) || response.questions.length === 0) {
+      throw new Error("Received empty or malformed quiz response.");
+    }
+
+    clearAdaptiveCycleState();
+    originalQuizResponse = response;
+    originalQuizQuestionStates = createEmptyQuizStates(response);
+    syncActiveQuizState();
     renderQuizResponse(response);
     setQuizMessage("success", "Quiz generated successfully.");
   } catch (error) {
     setQuizMessage("error", error.message || "Could not generate quiz.");
   } finally {
     isGeneratingQuiz = false;
+    generateQuizButtonEl.disabled = false;
     updateNotesUtilityButtons();
+  }
+}
+
+async function handleTeachWeakTopics() {
+  if (!latestNotesResponse || weakConcepts.length === 0 || isGeneratingRevision || latestRevisionResponse !== null) {
+    return;
+  }
+
+  isGeneratingRevision = true;
+  teachWeakTopicsButtonEl.disabled = true;
+  revisionOutputEl.hidden = false;
+  revisionMessageEl.dataset.state = "loading";
+  revisionMessageEl.textContent = "Generating focused revision...";
+  revisionContentEl.replaceChildren();
+  generateRetestButtonEl.hidden = true;
+
+  try {
+    const payload = {
+      notes_response: latestNotesResponse,
+      weak_concepts: weakConcepts,
+      incorrect_questions: incorrectQuestionContexts,
+    };
+
+    const response = await generateRevision(payload);
+    latestRevisionResponse = response;
+
+    revisionMessageEl.dataset.state = "success";
+    revisionMessageEl.textContent = "Revision generated successfully.";
+
+    response.concepts.forEach(conceptRev => {
+       const sec = document.createElement("section");
+       sec.className = "revision-concept-section";
+
+       appendTextElement(sec, "h3", conceptRev.concept);
+       appendTextElement(sec, "p", conceptRev.explanation);
+
+       appendTextElement(sec, "h4", "Example");
+       appendTextElement(sec, "p", conceptRev.example);
+
+       if (conceptRev.analogy) {
+         appendTextElement(sec, "h4", "Analogy");
+         appendTextElement(sec, "p", conceptRev.analogy);
+       }
+
+       if (conceptRev.memory_trick) {
+         appendTextElement(sec, "h4", "Memory Trick");
+         appendTextElement(sec, "p", conceptRev.memory_trick);
+       }
+
+       appendList(sec, "Key Facts", conceptRev.key_facts);
+
+       if (conceptRev.common_mistake) {
+         appendTextElement(sec, "h4", "Common Mistake");
+         appendTextElement(sec, "p", conceptRev.common_mistake);
+       }
+
+       revisionContentEl.appendChild(sec);
+    });
+
+    teachWeakTopicsButtonEl.hidden = true;
+    generateRetestButtonEl.hidden = false;
+  } catch (error) {
+    revisionMessageEl.dataset.state = "error";
+    revisionMessageEl.textContent = error.message || "Could not generate revision.";
+    teachWeakTopicsButtonEl.disabled = false;
+  } finally {
+    isGeneratingRevision = false;
+  }
+}
+
+async function handleGenerateRetest() {
+  if (!latestNotesResponse || !latestRevisionResponse || isGeneratingRetest) {
+    return;
+  }
+
+  isGeneratingRetest = true;
+  generateRetestButtonEl.disabled = true;
+  setQuizMessage("loading", "Generating retest...");
+
+  try {
+    const originalQuestions = originalQuizResponse.questions.map(q => q.question);
+
+    const payload = {
+      notes_response: latestNotesResponse,
+      weak_concepts: weakConcepts,
+      original_questions: originalQuestions
+    };
+
+    const response = await generateRetest(payload);
+
+    if (!response || !Array.isArray(response.questions) || response.questions.length === 0) {
+       throw new Error("Received empty or malformed retest response.");
+    }
+
+    latestRetestResponse = response;
+    currentQuizMode = "retest";
+    retestQuestionStates = createEmptyQuizStates(response);
+    syncActiveQuizState();
+
+    generateRetestButtonEl.hidden = true;
+    renderQuizResponse(response);
+    setQuizMessage("success", "Retest generated successfully.");
+
+    quizOutputEl.scrollIntoView({ behavior: 'smooth' });
+
+  } catch (error) {
+    setQuizMessage("error", error.message || "Could not generate retest.");
+    generateRetestButtonEl.disabled = false;
+  } finally {
+    isGeneratingRetest = false;
   }
 }
 
@@ -809,4 +1092,6 @@ quizPrevButtonEl.addEventListener("click", handleQuizPrevious);
 quizNextButtonEl.addEventListener("click", handleQuizNext);
 quizSubmitButtonEl.addEventListener("click", handleQuizSubmit);
 quizRestartButtonEl.addEventListener("click", handleQuizRestart);
+teachWeakTopicsButtonEl.addEventListener("click", handleTeachWeakTopics);
+generateRetestButtonEl.addEventListener("click", handleGenerateRetest);
 updateNotesUtilityButtons();
