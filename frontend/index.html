@@ -85,66 +85,87 @@
       </form>
     </section>
 
-    <section id="notes-output" aria-labelledby="notes-output-heading" hidden>
-      <h2 id="notes-output-heading">Generated Notes</h2>
-      <div id="notes-actions">
-        <button id="copy-notes-btn" type="button" disabled>Copy Notes</button>
-        <button id="export-pdf-btn" type="button" disabled>Export PDF</button>
-        <button id="generate-flashcards-btn" type="button" disabled>Generate Flashcards</button>
-        <button id="generate-quiz-btn" type="button" disabled>Generate Quiz</button>
-        <p id="notes-utility-message" data-state="idle"></p>
+    <section id="learning-workspace" hidden>
+      <nav id="workspace-tabs" role="tablist">
+        <button id="workspace-tab-notes" role="tab" aria-selected="true" aria-controls="workspace-panel-notes" type="button">Notes</button>
+        <button id="workspace-tab-flashcards" role="tab" aria-selected="false" aria-controls="workspace-panel-flashcards" type="button">Flashcards</button>
+        <button id="workspace-tab-quiz" role="tab" aria-selected="false" aria-controls="workspace-panel-quiz" type="button">Quiz</button>
+        <button id="workspace-tab-revision" role="tab" aria-selected="false" aria-controls="workspace-panel-revision" type="button">Revision</button>
+      </nav>
+
+      <div id="workspace-panel-notes" role="tabpanel" aria-labelledby="workspace-tab-notes">
+        <section id="notes-output" aria-labelledby="notes-output-heading">
+          <h2 id="notes-output-heading">Generated Notes</h2>
+          <div id="notes-actions">
+            <button id="copy-notes-btn" type="button" disabled>Copy Notes</button>
+            <button id="export-pdf-btn" type="button" disabled>Export PDF</button>
+            <button id="generate-flashcards-btn" type="button" disabled>Generate Flashcards</button>
+            <button id="generate-quiz-btn" type="button" disabled>Generate Quiz</button>
+            <p id="notes-utility-message" data-state="idle"></p>
+          </div>
+          <div id="notes-meta"></div>
+          <article id="notes-content"></article>
+        </section>
       </div>
-      <div id="notes-meta"></div>
-      <article id="notes-content"></article>
-      <section id="flashcards-output" aria-labelledby="flashcards-heading" hidden>
-        <h2 id="flashcards-heading">Flashcards</h2>
-        <p id="flashcards-message" data-state="idle"></p>
-        <div id="flashcard-controls" class="flashcard-controls">
-          <button id="flashcard-prev-btn" type="button" disabled>Previous</button>
-          <span id="flashcard-progress">0 / 0</span>
-          <button id="flashcard-next-btn" type="button" disabled>Next</button>
-        </div>
-        <button id="flashcard-flip-btn" type="button">Show Answer</button>
-        <div id="flashcard-card" class="flashcard-card" aria-live="polite">
-          <h3 id="flashcard-front">No flashcards yet.</h3>
-          <p id="flashcard-back" hidden></p>
-        </div>
-      </section>
-      <section id="quiz-output" aria-labelledby="quiz-heading" hidden>
-        <h2 id="quiz-heading">Quiz</h2>
-        <p id="quiz-message" data-state="idle"></p>
-        <div id="quiz-controls" class="flashcard-controls">
-          <button id="quiz-prev-btn" type="button" disabled>Previous</button>
-          <span id="quiz-progress">0 / 0</span>
-          <button id="quiz-next-btn" type="button" disabled>Next</button>
-        </div>
-        <p id="quiz-score" class="quiz-score">Score: 0 / 0</p>
-        <div id="quiz-summary" class="quiz-summary" hidden>
-          <h3>Quiz Summary</h3>
-          <p id="quiz-summary-score"></p>
-          <p id="quiz-summary-details"></p>
-          <div id="quiz-incorrect-review"></div>
-          <div id="quiz-weak-concepts"></div>
-          <button id="teach-weak-topics-btn" type="button" hidden>Teach Me My Weak Topics</button>
-          <button id="quiz-restart-btn" type="button">Restart Quiz</button>
-        </div>
-        <div id="quiz-card" class="flashcard-card" aria-live="polite">
-          <h3 id="quiz-question">No quiz yet.</h3>
-          <div id="quiz-options"></div>
-          <button id="quiz-submit-btn" type="button" disabled>Submit Answer</button>
-          <p id="quiz-feedback" data-state="idle"></p>
-        </div>
-      </section>
-      <section id="revision-output" aria-labelledby="revision-heading" hidden>
-        <h2 id="revision-heading">Focused Revision</h2>
-        <p id="revision-message" data-state="idle"></p>
-        <div id="revision-content"></div>
-        <button id="generate-retest-btn" type="button" hidden>Retest Me</button>
-      </section>
+
+      <div id="workspace-panel-flashcards" role="tabpanel" aria-labelledby="workspace-tab-flashcards" hidden>
+        <section id="flashcards-output" aria-labelledby="flashcards-heading">
+          <h2 id="flashcards-heading">Flashcards</h2>
+          <p id="flashcards-message" data-state="idle"></p>
+          <div id="flashcard-controls" class="flashcard-controls">
+            <button id="flashcard-prev-btn" type="button" disabled>Previous</button>
+            <span id="flashcard-progress">0 / 0</span>
+            <button id="flashcard-next-btn" type="button" disabled>Next</button>
+          </div>
+          <button id="flashcard-flip-btn" type="button">Show Answer</button>
+          <div id="flashcard-card" class="flashcard-card" aria-live="polite">
+            <h3 id="flashcard-front">No flashcards yet.</h3>
+            <p id="flashcard-back" hidden></p>
+          </div>
+        </section>
+      </div>
+
+      <div id="workspace-panel-quiz" role="tabpanel" aria-labelledby="workspace-tab-quiz" hidden>
+        <section id="quiz-output" aria-labelledby="quiz-heading">
+          <h2 id="quiz-heading">Quiz</h2>
+          <p id="quiz-message" data-state="idle"></p>
+          <div id="quiz-controls" class="flashcard-controls">
+            <button id="quiz-prev-btn" type="button" disabled>Previous</button>
+            <span id="quiz-progress">0 / 0</span>
+            <button id="quiz-next-btn" type="button" disabled>Next</button>
+            <button id="quiz-first-unanswered-btn" type="button" hidden style="margin-left: auto;">Go to First Unanswered</button>
+          </div>
+          <p id="quiz-score" class="quiz-score">Score: 0 / 0</p>
+          <div id="quiz-summary" class="quiz-summary" hidden>
+            <h3>Quiz Summary</h3>
+            <div id="quiz-summary-score"></div>
+            <div id="quiz-summary-details"></div>
+            <div id="quiz-incorrect-review"></div>
+            <div id="quiz-weak-concepts"></div>
+            <button id="teach-weak-topics-btn" type="button" hidden>Teach Me My Weak Topics</button>
+            <button id="quiz-restart-btn" type="button">Restart Quiz</button>
+          </div>
+          <div id="quiz-card" class="flashcard-card" aria-live="polite">
+            <h3 id="quiz-question">No quiz yet.</h3>
+            <div id="quiz-options"></div>
+            <button id="quiz-submit-btn" type="button" disabled>Submit Answer</button>
+            <p id="quiz-feedback" data-state="idle"></p>
+          </div>
+        </section>
+      </div>
+
+      <div id="workspace-panel-revision" role="tabpanel" aria-labelledby="workspace-tab-revision" hidden>
+        <section id="revision-output" aria-labelledby="revision-heading">
+          <h2 id="revision-heading">Focused Revision</h2>
+          <p id="revision-message" data-state="idle"></p>
+          <div id="revision-content"></div>
+          <button id="generate-retest-btn" type="button" hidden>Retest Me</button>
+        </section>
+      </div>
     </section>
   </main>
 
   <script src="js/api.js"></script>
-  <script src="js/main.js"></script>
+  <script src="js/main.js?v=6"></script>
 </body>
 </html>

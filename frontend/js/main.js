@@ -55,7 +55,15 @@ const generateRetestButtonEl = document.getElementById("generate-retest-btn");
 const pdfFileEl = document.getElementById("pdf-file");
 const extractPdfButtonEl = document.getElementById("extract-pdf-btn");
 const pdfMessageEl = document.getElementById("pdf-message");
-
+const learningWorkspaceEl = document.getElementById("learning-workspace");
+const tabNotesBtn = document.getElementById("workspace-tab-notes");
+const tabFlashcardsBtn = document.getElementById("workspace-tab-flashcards");
+const tabQuizBtn = document.getElementById("workspace-tab-quiz");
+const tabRevisionBtn = document.getElementById("workspace-tab-revision");
+const panelNotesEl = document.getElementById("workspace-panel-notes");
+const panelFlashcardsEl = document.getElementById("workspace-panel-flashcards");
+const panelQuizEl = document.getElementById("workspace-panel-quiz");
+const panelRevisionEl = document.getElementById("workspace-panel-revision");
 let isGeneratingNotes = false;
 let isExtractingPdf = false;
 let isExportingPdf = false;
@@ -80,7 +88,36 @@ let flashcardIndex = 0;
 let flashcardsAreFlipped = false;
 let quizIndex = 0;
 let quizQuestionStates = [];
+let activeWorkspaceTab = "notes";
 
+function switchWorkspaceTab(tabName) {
+  const tabs = {
+    notes: { btn: tabNotesBtn, panel: panelNotesEl },
+    flashcards: { btn: tabFlashcardsBtn, panel: panelFlashcardsEl },
+    quiz: { btn: tabQuizBtn, panel: panelQuizEl },
+    revision: { btn: tabRevisionBtn, panel: panelRevisionEl }
+  };
+
+  if (!tabs[tabName]) return;
+
+  activeWorkspaceTab = tabName;
+
+  Object.keys(tabs).forEach(key => {
+    const isActive = key === tabName;
+    const { btn, panel } = tabs[key];
+
+    if (btn && panel) {
+      btn.setAttribute("aria-selected", isActive ? "true" : "false");
+      if (isActive) {
+        panel.removeAttribute("hidden");
+        // Maintain smooth UX by ensuring the user starts at the top of the newly shown panel
+        panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      } else {
+        panel.setAttribute("hidden", "");
+      }
+    }
+  });
+}
 function createEmptyQuizStates(response) {
   if (!response || !Array.isArray(response.questions)) {
     return [];
@@ -139,7 +176,6 @@ function clearAdaptiveCycleState() {
   quizWeakConceptsEl.replaceChildren();
   teachWeakTopicsButtonEl.hidden = true;
   teachWeakTopicsButtonEl.disabled = false;
-  revisionOutputEl.hidden = true;
   revisionContentEl.replaceChildren();
   revisionMessageEl.textContent = "";
   revisionMessageEl.dataset.state = "idle";
@@ -338,9 +374,31 @@ function formatNotesResponseAsPlainText(response) {
   return sections.join("\n").trim();
 }
 
+function renderNotesEmptyState() {
+  notesMetaEl.replaceChildren();
+  notesContentEl.replaceChildren();
+  const actions = document.getElementById("notes-actions");
+  if (actions) actions.hidden = true;
+  
+  appendTextElement(notesContentEl, "h3", "No notes generated yet.");
+  appendTextElement(notesContentEl, "p", "Generate AI notes from your uploaded PDF or pasted text.");
+  
+  const btn = document.createElement("button");
+  btn.type = "button";
+  btn.textContent = "Generate Notes";
+  btn.className = "empty-state-btn";
+  btn.style.marginTop = "20px";
+  btn.addEventListener("click", () => {
+    if (generateNotesButtonEl) generateNotesButtonEl.click();
+  });
+  notesContentEl.appendChild(btn);
+}
+
 function renderNotesResponse(response) {
   notesMetaEl.replaceChildren();
   notesContentEl.replaceChildren();
+  const actions = document.getElementById("notes-actions");
+  if (actions) actions.hidden = false;
 
   const notes = response.notes;
   const meta = document.createElement("p");
@@ -354,7 +412,6 @@ function renderNotesResponse(response) {
     notes.sections.forEach((section) => {
       const sectionEl = document.createElement("section");
       sectionEl.className = "generated-section";
-
       appendTextElement(sectionEl, "h3", section.heading);
       appendTextElement(sectionEl, "p", section.content);
       appendList(sectionEl, "Key Points", section.key_points);
@@ -362,7 +419,6 @@ function renderNotesResponse(response) {
       appendList(sectionEl, "Examples", section.examples);
       appendList(sectionEl, "Memory Tricks", section.memory_tricks);
       appendList(sectionEl, "Common Mistakes", section.common_mistakes);
-
       notesContentEl.appendChild(sectionEl);
     });
   }
@@ -372,8 +428,6 @@ function renderNotesResponse(response) {
   appendList(notesContentEl, "Key Takeaways", notes.key_takeaways);
   appendTextElement(notesContentEl, "h3", "One-Minute Revision");
   appendTextElement(notesContentEl, "p", notes.one_minute_revision);
-
-  notesOutputEl.hidden = false;
 }
 
 async function handleGenerateNotes(event) {
@@ -400,8 +454,10 @@ async function handleGenerateNotes(event) {
     latestNotesResponse = response;
     renderNotesResponse(response);
     updateNotesUtilityButtons();
-    setNotesUtilityMessage("idle", "");
+    renderNotesResponse(response);
     setNotesMessage("success", "Notes generated successfully.");
+    learningWorkspaceEl.hidden = false;
+    switchWorkspaceTab('notes');
   } catch (error) {
     setNotesMessage("error", error.message || "Could not generate notes.");
   } finally {
@@ -475,24 +531,40 @@ function resetFlashcardView() {
   flashcardNextButtonEl.disabled = false;
 }
 
+function renderFlashcardsEmptyState() {
+  const controls = document.getElementById("flashcard-controls");
+  const existingBtn = document.getElementById("empty-flashcards-btn");
+  if (existingBtn) existingBtn.remove();
+
+  if (controls) controls.hidden = true;
+  flashcardFlipButtonEl.hidden = true;
+  flashcardFrontEl.textContent = "No flashcards generated yet.";
+  flashcardBackEl.textContent = "";
+  flashcardBackEl.hidden = true;
+  
+  const btn = document.createElement("button");
+  btn.id = "empty-flashcards-btn";
+  btn.type = "button";
+  btn.textContent = "Generate Flashcards";
+  btn.style.marginTop = "20px";
+  btn.addEventListener("click", () => {
+    if (generateFlashcardsButtonEl) generateFlashcardsButtonEl.click();
+  });
+  document.getElementById("flashcard-card").appendChild(btn);
+}
+
 function renderFlashcardsResponse(response) {
   latestFlashcardsResponse = response;
-  flashcardsOutputEl.hidden = false;
+  const controls = document.getElementById("flashcard-controls");
+  const existingBtn = document.getElementById("empty-flashcards-btn");
+  if (existingBtn) existingBtn.remove();
 
-  if (!Array.isArray(response.flashcards) || response.flashcards.length === 0) {
-    flashcardFrontEl.textContent = "No flashcards available.";
-    flashcardBackEl.textContent = "";
-    flashcardBackEl.hidden = true;
-    flashcardProgressEl.textContent = "0 / 0";
-    flashcardPrevButtonEl.disabled = true;
-    flashcardNextButtonEl.disabled = true;
-    flashcardFlipButtonEl.disabled = true;
-    return;
-  }
-
+  if (controls) controls.hidden = false;
+  flashcardFlipButtonEl.hidden = false;
   flashcardFlipButtonEl.disabled = false;
   resetFlashcardView();
   updateFlashcardView();
+  flashcardsOutputEl.hidden = false;
 }
 
 function updateFlashcardView() {
@@ -563,6 +635,8 @@ async function handleGenerateFlashcards() {
     const response = await generateFlashcards(latestNotesResponse);
     renderFlashcardsResponse(response);
     setFlashcardsMessage("success", "Flashcards generated successfully.");
+    learningWorkspaceEl.hidden = false;
+    switchWorkspaceTab('flashcards');
   } catch (error) {
     setFlashcardsMessage("error", error.message || "Could not generate flashcards.");
   } finally {
@@ -611,7 +685,7 @@ function extractWeakConcepts() {
       incorrectContexts.push({
         concept: q.concept,
         question: q.question,
-        selected_answer: s.submittedAnswer,
+        selected_answer: s.selectedAnswer,
         correct_answer: q.correct_answer,
         explanation: q.explanation
       });
@@ -629,7 +703,11 @@ function extractWeakConcepts() {
 
 function updateQuizScoreDisplay() {
   const stats = getQuizStats();
-  quizScoreEl.textContent = `Score: ${stats.correctCount} / ${stats.total}`;
+  if (stats.submittedCount === stats.total && stats.total > 0) {
+    quizScoreEl.textContent = "";
+  } else {
+    quizScoreEl.innerHTML = `Answered: ${stats.submittedCount}/${stats.total}<br>Correct: ${stats.correctCount}<br>Wrong: ${stats.incorrectCount}<br>Remaining: ${stats.total - stats.submittedCount}`;
+  }
 }
 
 function updateQuizSummary() {
@@ -642,8 +720,10 @@ function updateQuizSummary() {
     return;
   }
 
-  quizSummaryScoreEl.textContent = `You scored ${stats.correctCount} out of ${stats.total} (${stats.percentage}%).`;
-  quizSummaryDetailsEl.textContent = `Answered: ${stats.submittedCount}/${stats.total} | Correct: ${stats.correctCount} | Incorrect: ${stats.incorrectCount}`;
+  quizSummaryScoreEl.innerHTML = `<h2 style="text-align: center;">Final Score</h2>
+<p style="font-size: 2em; text-align: center; margin: 10px 0;">${stats.correctCount} / ${stats.total}</p>
+<p style="font-size: 1.5em; text-align: center; font-weight: bold; margin: 0;">${stats.percentage}%</p>`;
+  quizSummaryDetailsEl.innerHTML = `<p style="text-align: center;">Correct: ${stats.correctCount} | Wrong: ${stats.incorrectCount}</p>`;
 
   quizIncorrectReviewEl.replaceChildren();
   quizWeakConceptsEl.replaceChildren();
@@ -668,7 +748,7 @@ function updateQuizSummary() {
        const div = document.createElement("div");
        div.className = "incorrect-review-item";
        appendTextElement(div, "p", `Question: ${q.question}`);
-       appendTextElement(div, "p", `Your Answer: ${s.submittedAnswer}`);
+       appendTextElement(div, "p", `Your Answer: ${s.selectedAnswer}`);
        appendTextElement(div, "p", `Correct Answer: ${q.correct_answer}`);
        appendTextElement(div, "p", `Explanation: ${q.explanation}`);
        appendTextElement(div, "p", `Concept: ${q.concept}`);
@@ -704,7 +784,9 @@ function resetQuizView() {
   quizIndex = 0;
   quizFeedbackEl.textContent = "";
   quizFeedbackEl.dataset.state = "idle";
+  quizFeedbackEl.hidden = false;
   quizSubmitButtonEl.disabled = true;
+  quizSubmitButtonEl.hidden = false;
   quizPrevButtonEl.disabled = true;
   quizNextButtonEl.disabled = false;
   quizSummaryEl.hidden = true;
@@ -717,32 +799,46 @@ function resetQuizView() {
   if (quizControlsEl) quizControlsEl.hidden = false;
 }
 
+function renderQuizEmptyState() {
+  document.getElementById("quiz-heading").textContent = "Quiz";
+  const existingBtn = document.getElementById("empty-quiz-btn");
+  if (existingBtn) existingBtn.remove();
+
+  quizQuestionStates = [];
+  if (quizControlsEl) quizControlsEl.hidden = true;
+  if (quizCardEl) quizCardEl.hidden = false;
+  
+  quizQuestionEl.textContent = "No quiz generated yet.";
+  quizOptionsEl.replaceChildren();
+  quizProgressEl.textContent = "0 / 0";
+  quizScoreEl.textContent = "";
+  quizSummaryEl.hidden = true;
+  quizSummaryScoreEl.textContent = "";
+  quizSummaryDetailsEl.textContent = "";
+  quizSubmitButtonEl.hidden = true;
+  quizFeedbackEl.hidden = true;
+  quizIncorrectReviewEl.replaceChildren();
+  quizWeakConceptsEl.replaceChildren();
+  teachWeakTopicsButtonEl.hidden = true;
+  generateRetestButtonEl.hidden = true;
+
+  const btn = document.createElement("button");
+  btn.id = "empty-quiz-btn";
+  btn.type = "button";
+  btn.textContent = "Generate Quiz";
+  btn.style.marginTop = "20px";
+  btn.addEventListener("click", () => {
+     if (generateQuizButtonEl) generateQuizButtonEl.click();
+  });
+  if (quizCardEl) quizCardEl.appendChild(btn);
+}
+
 function renderQuizResponse(response) {
   latestQuizResponse = response;
-  quizOutputEl.hidden = false;
-  document.getElementById("quiz-heading").textContent = currentQuizMode === "retest" ? "Retest" : "Quiz";
+  document.getElementById("quiz-heading").textContent = currentQuizMode === "retest" ? "Retest: Weak Concepts" : "Original Quiz";
 
-  if (!response || !Array.isArray(response.questions) || response.questions.length === 0) {
-    quizQuestionStates = [];
-    quizQuestionEl.textContent = "No quiz questions available.";
-    quizOptionsEl.replaceChildren();
-    quizProgressEl.textContent = "0 / 0";
-    quizScoreEl.textContent = "Score: 0 / 0";
-    quizSummaryEl.hidden = true;
-    quizSummaryScoreEl.textContent = "";
-    quizSummaryDetailsEl.textContent = "";
-    quizPrevButtonEl.disabled = true;
-    quizNextButtonEl.disabled = true;
-    quizSubmitButtonEl.disabled = true;
-    quizIncorrectReviewEl.replaceChildren();
-    quizWeakConceptsEl.replaceChildren();
-    teachWeakTopicsButtonEl.hidden = true;
-    revisionOutputEl.hidden = true;
-    generateRetestButtonEl.hidden = true;
-    if (quizCardEl) quizCardEl.hidden = false;
-    if (quizControlsEl) quizControlsEl.hidden = false;
-    return;
-  }
+  const existingBtn = document.getElementById("empty-quiz-btn");
+  if (existingBtn) existingBtn.remove();
 
   resetQuizView();
   updateQuizView();
@@ -766,6 +862,30 @@ function updateQuizView() {
 
   const stats = getQuizStats();
   const isCompleted = stats.total > 0 && stats.submittedCount === stats.total;
+
+  const quizFirstUnansweredBtn = document.getElementById("quiz-first-unanswered-btn");
+  if (quizFirstUnansweredBtn) {
+    let hasSkipped = false;
+    const states = getActiveQuizStates();
+    if (states) {
+      let maxSubmittedIdx = -1;
+      for (let i = 0; i < states.length; i++) {
+        if (states[i].isSubmitted) maxSubmittedIdx = i;
+      }
+      for (let i = 0; i < maxSubmittedIdx; i++) {
+        if (!states[i].isSubmitted) {
+          hasSkipped = true;
+          break;
+        }
+      }
+    }
+    
+    if (hasSkipped) {
+      quizFirstUnansweredBtn.hidden = false;
+    } else {
+      quizFirstUnansweredBtn.hidden = true;
+    }
+  }
 
   // When the quiz is complete, hide the question UI and controls and show only the summary
   if (isCompleted) {
@@ -913,6 +1033,8 @@ async function handleGenerateQuiz() {
     syncActiveQuizState();
     renderQuizResponse(response);
     setQuizMessage("success", "Quiz generated successfully.");
+    learningWorkspaceEl.hidden = false;
+    switchWorkspaceTab('quiz');
   } catch (error) {
     setQuizMessage("error", error.message || "Could not generate quiz.");
   } finally {
@@ -922,8 +1044,75 @@ async function handleGenerateQuiz() {
   }
 }
 
+function renderRevisionEmptyState() {
+  revisionContentEl.replaceChildren();
+  const stats = getQuizStats();
+  if (stats.total === 0 || stats.submittedCount < stats.total) {
+    appendTextElement(revisionContentEl, "h3", "You haven't completed a quiz yet.");
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.textContent = "Start Quiz";
+    btn.style.marginTop = "20px";
+    btn.addEventListener("click", () => {
+       switchWorkspaceTab("quiz");
+       if (!originalQuizResponse) {
+           if (generateQuizButtonEl) generateQuizButtonEl.click();
+       }
+    });
+    revisionContentEl.appendChild(btn);
+  } else {
+    appendTextElement(revisionContentEl, "h3", "Quiz completed!");
+    appendTextElement(revisionContentEl, "p", "Click 'Teach Me My Weak Topics' in the Quiz tab to generate focused revision.");
+  }
+  generateRetestButtonEl.hidden = true;
+}
+
+function renderRevisionResponse(response) {
+  latestRevisionResponse = response;
+  revisionContentEl.replaceChildren();
+
+  const revision = response.concepts;
+  if (Array.isArray(revision)) {
+    revision.forEach(conceptRev => {
+       const sec = document.createElement("section");
+       sec.className = "revision-concept-section";
+       appendTextElement(sec, "h3", conceptRev.concept);
+       appendTextElement(sec, "p", conceptRev.explanation);
+       appendTextElement(sec, "h4", "Example");
+       appendTextElement(sec, "p", conceptRev.example);
+       if (conceptRev.analogy) {
+         appendTextElement(sec, "h4", "Analogy");
+         appendTextElement(sec, "p", conceptRev.analogy);
+       }
+       if (conceptRev.memory_trick) {
+         appendTextElement(sec, "h4", "Memory Trick");
+         appendTextElement(sec, "p", conceptRev.memory_trick);
+       }
+       if (Array.isArray(conceptRev.key_facts)) {
+         appendList(sec, "Key Facts", conceptRev.key_facts);
+       }
+       if (conceptRev.common_misconception) {
+         appendTextElement(sec, "h4", "Common Misconception");
+         appendTextElement(sec, "p", conceptRev.common_misconception);
+       }
+       if (conceptRev.common_mistake) {
+         appendTextElement(sec, "h4", "Common Mistake");
+         appendTextElement(sec, "p", conceptRev.common_mistake);
+       }
+       revisionContentEl.appendChild(sec);
+    });
+  }
+  generateRetestButtonEl.hidden = false;
+}
+
 async function handleTeachWeakTopics() {
-  if (!latestNotesResponse || weakConcepts.length === 0 || isGeneratingRevision || latestRevisionResponse !== null) {
+  if (!latestNotesResponse || weakConcepts.length === 0 || isGeneratingRevision) {
+    return;
+  }
+  
+  if (latestRevisionResponse !== null) {
+    learningWorkspaceEl.hidden = false;
+    switchWorkspaceTab('revision');
     return;
   }
 
@@ -934,6 +1123,8 @@ async function handleTeachWeakTopics() {
   revisionMessageEl.textContent = "Generating focused revision...";
   revisionContentEl.replaceChildren();
   generateRetestButtonEl.hidden = true;
+  learningWorkspaceEl.hidden = false;
+  switchWorkspaceTab('revision');
 
   try {
     const payload = {
@@ -943,43 +1134,12 @@ async function handleTeachWeakTopics() {
     };
 
     const response = await generateRevision(payload);
-    latestRevisionResponse = response;
-
     revisionMessageEl.dataset.state = "success";
     revisionMessageEl.textContent = "Revision generated successfully.";
-
-    response.concepts.forEach(conceptRev => {
-       const sec = document.createElement("section");
-       sec.className = "revision-concept-section";
-
-       appendTextElement(sec, "h3", conceptRev.concept);
-       appendTextElement(sec, "p", conceptRev.explanation);
-
-       appendTextElement(sec, "h4", "Example");
-       appendTextElement(sec, "p", conceptRev.example);
-
-       if (conceptRev.analogy) {
-         appendTextElement(sec, "h4", "Analogy");
-         appendTextElement(sec, "p", conceptRev.analogy);
-       }
-
-       if (conceptRev.memory_trick) {
-         appendTextElement(sec, "h4", "Memory Trick");
-         appendTextElement(sec, "p", conceptRev.memory_trick);
-       }
-
-       appendList(sec, "Key Facts", conceptRev.key_facts);
-
-       if (conceptRev.common_mistake) {
-         appendTextElement(sec, "h4", "Common Mistake");
-         appendTextElement(sec, "p", conceptRev.common_mistake);
-       }
-
-       revisionContentEl.appendChild(sec);
-    });
-
-    teachWeakTopicsButtonEl.hidden = true;
-    generateRetestButtonEl.hidden = false;
+    
+    renderRevisionResponse(response);
+    learningWorkspaceEl.hidden = false;
+    switchWorkspaceTab('revision');
   } catch (error) {
     revisionMessageEl.dataset.state = "error";
     revisionMessageEl.textContent = error.message || "Could not generate revision.";
@@ -1095,3 +1255,54 @@ quizRestartButtonEl.addEventListener("click", handleQuizRestart);
 teachWeakTopicsButtonEl.addEventListener("click", handleTeachWeakTopics);
 generateRetestButtonEl.addEventListener("click", handleGenerateRetest);
 updateNotesUtilityButtons();
+
+// Tab Click Listeners
+tabNotesBtn.addEventListener("click", () => switchWorkspaceTab("notes"));
+tabFlashcardsBtn.addEventListener("click", () => switchWorkspaceTab("flashcards"));
+tabQuizBtn.addEventListener("click", () => switchWorkspaceTab("quiz"));
+tabRevisionBtn.addEventListener("click", () => switchWorkspaceTab("revision"));
+
+document.addEventListener("DOMContentLoaded", () => {
+  renderNotesEmptyState();
+  renderFlashcardsEmptyState();
+  renderQuizEmptyState();
+  renderRevisionEmptyState();
+});
+
+// Keyboard Navigation
+const tabButtons = [
+  document.getElementById("workspace-tab-notes"),
+  document.getElementById("workspace-tab-flashcards"),
+  document.getElementById("workspace-tab-quiz"),
+  document.getElementById("workspace-tab-revision")
+];
+
+tabButtons.forEach((btn, index) => {
+  if (!btn) return;
+  btn.addEventListener("keydown", (e) => {
+    if (e.key === "ArrowRight") {
+      e.preventDefault();
+      tabButtons[(index + 1) % tabButtons.length].focus();
+    } else if (e.key === "ArrowLeft") {
+      e.preventDefault();
+      tabButtons[(index - 1 + tabButtons.length) % tabButtons.length].focus();
+    } else if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      btn.click();
+    }
+  });
+});
+
+// Quiz First Unanswered logic
+const quizFirstUnansweredBtn = document.getElementById("quiz-first-unanswered-btn");
+if (quizFirstUnansweredBtn) {
+  quizFirstUnansweredBtn.addEventListener("click", () => {
+    const states = getActiveQuizStates();
+    if (!states) return;
+    const idx = states.findIndex(s => !s.isSubmitted);
+    if (idx !== -1) {
+      quizIndex = idx;
+      updateQuizView();
+    }
+  });
+}

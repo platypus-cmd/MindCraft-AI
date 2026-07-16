@@ -113,6 +113,10 @@ button:focus {
   margin-top: 0;
 }
 
+[hidden] {
+  display: none !important;
+}
+
 .flashcard-controls {
   display: flex;
   flex-wrap: wrap;
@@ -227,4 +231,69 @@ dd {
   .controls-grid {
     grid-template-columns: 1fr;
   }
+}
+
+/* Learning Workspace Tabs */
+#learning-workspace {
+  margin-top: 24px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+#workspace-tabs {
+  display: flex;
+  overflow-x: auto;
+  gap: 8px;
+  border-bottom: 1px solid #d0d0d5;
+  padding-bottom: 1px;
+  margin-bottom: 16px;
+}
+
+#workspace-tabs [role="tab"] {
+  margin-top: 0;
+  background: transparent;
+  color: #6e6e73;
+  border: 1px solid transparent;
+  border-bottom: 3px solid transparent;
+  border-radius: 8px 8px 0 0;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+#workspace-tabs [role="tab"]:hover {
+  background: #e5e5ea;
+  color: #1d1d1f;
+}
+
+#workspace-tabs [role="tab"][aria-selected="true"] {
+  background: #ffffff;
+  color: #1d1d1f;
+  border: 1px solid #d0d0d5;
+  border-bottom: 3px solid #1a7f37;
+  font-weight: 600;
+}
+
+#workspace-tabs [role="tab"]:focus-visible {
+  outline: 3px solid #9cc7ff;
+  outline-offset: -2px;
+}
+
+[role="tabpanel"] {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* Apply consistent output box styling to the newly separated sections */
+#flashcards-output,
+#quiz-output,
+#revision-output {
+  padding: 16px;
+  border: 1px solid #d0d0d5;
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+/* Override the default top margin from #notes-output */
+#workspace-panel-notes #notes-output {
+  margin-top: 0;
 }
