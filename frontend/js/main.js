@@ -394,9 +394,13 @@ function renderNotesEmptyState() {
   notesContentEl.appendChild(btn);
 }
 
-function renderNotesResponse(response) {
+function renderNotesResponse(response, themeClass = "notes-theme-plain") {
   notesMetaEl.replaceChildren();
   notesContentEl.replaceChildren();
+
+  notesContentEl.className = "";
+  notesContentEl.classList.add(themeClass);
+
   const actions = document.getElementById("notes-actions");
   if (actions) actions.hidden = false;
 
@@ -449,12 +453,13 @@ async function handleGenerateNotes(event) {
   generateNotesButtonEl.disabled = true;
   setNotesMessage("loading", "Generating notes...");
 
+  const selectedTheme = document.getElementById("notes-theme") ? document.getElementById("notes-theme").value : "notes-theme-plain";
+
   try {
     const response = await generateNotes(payload);
     latestNotesResponse = response;
-    renderNotesResponse(response);
+    renderNotesResponse(response, selectedTheme);
     updateNotesUtilityButtons();
-    renderNotesResponse(response);
     setNotesMessage("success", "Notes generated successfully.");
     learningWorkspaceEl.hidden = false;
     switchWorkspaceTab('notes');

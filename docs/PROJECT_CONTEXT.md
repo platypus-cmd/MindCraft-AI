@@ -1362,12 +1362,12 @@ At the end of this milestone, the application must already perform one complete 
 * Performance improvements.
 * UI consistency.
 
-## Milestone 9 â€” Deployment
+## Milestone 9 â€” Reading Themes
 
-* AWS Elastic Beanstalk configuration.
-* Production environment variables.
-* Deployment.
-* Live application testing.
+* Add a new dropdown to the Notes Generation form.
+* Apply selected theme class to the notes container.
+* Add CSS rules for 5 different themes.
+* Switch themes without reloading or regenerating content.
 
 ## Milestone 10 â€” Documentation
 
@@ -2444,7 +2444,7 @@ Current milestone status:
 * Milestone 6 â€” Quiz: **Complete**
 * Milestone 7 â€” Adaptive Revision: **Not Started**
 * Milestone 8 â€” Polish: **Not Started**
-* Milestone 9 â€” Deployment: **Not Started**
+* Milestone 9 — Reading Themes: **Complete**
 * Milestone 10 â€” Documentation: **Not Started**
 
 Milestones 1 through 6 are complete.
@@ -2639,7 +2639,7 @@ Current milestone status:
 * Milestone 6 — Quiz: **Complete**
 * Milestone 7 — Adaptive Revision: **Not Started**
 * Milestone 8 — Polish: **Not Started**
-* Milestone 9 — Deployment: **Not Started**
+* Milestone 9 — Reading Themes: **Complete**
 * Milestone 10 — Documentation: **Not Started**
 
 Milestones 1 through 6 are complete.
