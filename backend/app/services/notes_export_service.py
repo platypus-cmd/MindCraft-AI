@@ -69,6 +69,7 @@ def _build_story(
         _add_list_section(story, "Key Points", section.key_points, styles)
         _add_definitions(story, section.definitions, styles)
         _add_list_section(story, "Examples", section.examples, styles)
+        _add_list_section(story, "Exam Tips", section.exam_tips, styles)
         _add_list_section(story, "Memory Tricks", section.memory_tricks, styles)
         _add_list_section(story, "Common Mistakes", section.common_mistakes, styles)
 

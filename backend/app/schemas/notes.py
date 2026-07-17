@@ -65,6 +65,7 @@ class NotesSection(BaseModel):
     key_points: list[str]
     definitions: list[DefinitionItem]
     examples: list[str]
+    exam_tips: list[str] = []
     memory_tricks: list[str]
     common_mistakes: list[str]
 
@@ -94,4 +95,3 @@ class NotesResponse(BaseModel):
 class PdfExportRequest(BaseModel):
     html_content: str
     theme_class: str
-

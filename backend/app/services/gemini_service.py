@@ -2,6 +2,7 @@
 
 import asyncio
 import logging
+import time
 from typing import Any, TypeVar
 
 from google import genai
@@ -26,6 +27,7 @@ class GeminiService:
 
     def __init__(self) -> None:
         self._client: genai.Client | None = None
+        self.last_metadata: dict[str, Any] = {}
 
     def _get_client(self) -> genai.Client:
         if not settings.gemini_api_key:
@@ -45,6 +47,7 @@ class GeminiService:
         client = self._get_client()
 
         try:
+            start_time = time.time()
             response = await asyncio.wait_for(
                 client.aio.models.generate_content(
                     model=settings.gemini_model,
@@ -56,6 +59,29 @@ class GeminiService:
                 ),
                 timeout=settings.gemini_timeout_seconds,
             )
+            elapsed = time.time() - start_time
+            
+            prompt_tokens = 0
+            candidates_tokens = 0
+            if hasattr(response, "usage_metadata") and response.usage_metadata:
+                prompt_tokens = getattr(response.usage_metadata, "prompt_token_count", 0)
+                candidates_tokens = getattr(response.usage_metadata, "candidates_token_count", 0)
+            elif hasattr(response, "usage") and response.usage:
+                prompt_tokens = getattr(response.usage, "prompt_tokens", 0)
+                candidates_tokens = getattr(response.usage, "completion_tokens", 0)
+            
+            self.last_metadata = {
+                "latency": elapsed,
+                "prompt_tokens": prompt_tokens,
+                "output_tokens": candidates_tokens,
+                "total_tokens": prompt_tokens + candidates_tokens
+            }
+            
+            logger.info(
+                "Gemini generation complete: latency=%.2fs, prompt_tokens=%s, output_tokens=%s",
+                elapsed, prompt_tokens, candidates_tokens
+            )
+
         except asyncio.TimeoutError as exc:
             logger.warning(
                 "Gemini request timed out after %s seconds.",

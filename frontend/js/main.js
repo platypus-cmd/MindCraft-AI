@@ -264,6 +264,24 @@ function appendTextElement(parent, tagName, text, className) {
   return element;
 }
 
+function appendMarkdownContent(parent, text, className) {
+  if (!text) {
+    return null;
+  }
+
+  const element = document.createElement("div");
+  element.className = className || "markdown-content";
+
+  if (typeof marked !== "undefined" && marked.parse) {
+    element.innerHTML = marked.parse(text);
+  } else {
+    element.textContent = text;
+  }
+
+  parent.appendChild(element);
+  return element;
+}
+
 function appendList(parent, title, items) {
   if (!Array.isArray(items) || items.length === 0) {
     return;
@@ -351,6 +369,8 @@ function formatNotesResponseAsPlainText(response) {
         "",
         formatListForCopy("Examples", section.examples),
         "",
+        formatListForCopy("Exam Tips", section.exam_tips),
+        "",
         formatListForCopy("Memory Tricks", section.memory_tricks),
         "",
         formatListForCopy("Common Mistakes", section.common_mistakes)
@@ -417,10 +437,11 @@ function renderNotesResponse(response, themeClass = "notes-theme-plain") {
       const sectionEl = document.createElement("section");
       sectionEl.className = "generated-section";
       appendTextElement(sectionEl, "h3", section.heading);
-      appendTextElement(sectionEl, "p", section.content);
+      appendMarkdownContent(sectionEl, section.content, "section-content");
       appendList(sectionEl, "Key Points", section.key_points);
       appendDefinitions(sectionEl, section.definitions);
       appendList(sectionEl, "Examples", section.examples);
+      appendList(sectionEl, "Exam Tips", section.exam_tips);
       appendList(sectionEl, "Memory Tricks", section.memory_tricks);
       appendList(sectionEl, "Common Mistakes", section.common_mistakes);
       notesContentEl.appendChild(sectionEl);
@@ -428,10 +449,10 @@ function renderNotesResponse(response, themeClass = "notes-theme-plain") {
   }
 
   appendTextElement(notesContentEl, "h3", "Summary");
-  appendTextElement(notesContentEl, "p", notes.summary);
+  appendMarkdownContent(notesContentEl, notes.summary, "section-content");
   appendList(notesContentEl, "Key Takeaways", notes.key_takeaways);
   appendTextElement(notesContentEl, "h3", "One-Minute Revision");
-  appendTextElement(notesContentEl, "p", notes.one_minute_revision);
+  appendMarkdownContent(notesContentEl, notes.one_minute_revision, "section-content");
 }
 
 async function handleGenerateNotes(event) {
