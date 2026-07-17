@@ -1,196 +1,184 @@
-# MindCraft AI - Milestone 2: Notes Vertical Slice
+# MindCraft AI
 
-MindCraft AI is a personalized AI study companion for college students. This
-milestone implements the first complete notes workflow:
+[![FastAPI](https://img.shields.io/badge/Backend-FastAPI-009688.svg?style=flat-square&logo=fastapi)](https://fastapi.tiangolo.com/)
+[![Gemini](https://img.shields.io/badge/AI-Google%20Gemini-4285F4.svg?style=flat-square&logo=google-gemini)](https://ai.google.dev/)
+[![Playwright](https://img.shields.io/badge/PDF%20Renderer-Playwright-2EAD33.svg?style=flat-square&logo=playwright)](https://playwright.dev/)
+[![License](https://img.shields.io/badge/License-MIT-yellow.svg?style=flat-square)](#license)
+
+**MindCraft AI** is an AI-powered personalized learning workspace designed to transform standard study materials into structured, adaptive educational assets. By leveraging Google's Gemini LLMs, MindCraft AI goes beyond simple textbook summaries to act as an expert private tutor—tailoring notes, generating quizzes, building flashcards, and identifying knowledge gaps for university-level exam preparation.
+
+---
+
+## 🚀 Key Features
+
+### 📚 Adaptive Study Notes
+*   **Dynamic Customization**: Personalize study materials by selecting **Learning Goals** (Academic, Exam Revision, Deep Understanding, Simple Explanations), **Knowledge Levels** (Beginner, Intermediate, Advanced), and **Note Lengths** (Quick Review, Standard, Comprehensive).
+*   **Concept-First Teaching**: Structured around university syllabus dimensions: Definition, Mechanism, Application, and Distinctions.
+*   **Rich Markdown Support**: Full inline formatting including headings, bold keywords, bullet lists, blockquotes, and code snippets.
+*   **Reading Time Estimation**: Dynamic word-count analysis calculated on the backend to plan study sessions.
+
+### 🧪 Active Recall & Practice
+*   **Flashcards**: Automated generation of concept-focused flashcards targeting active recall.
+*   **Interactive Quizzes**: Multiple-choice testing based directly on the generated notes.
+*   **Adaptive Revision**: Analyze incorrect quiz answers to automatically generate targeted revision guides focusing on weak spots.
+*   **Retests**: Generate custom follow-up tests specifically targeting previously missed concepts to reinforce learning.
+
+### 🎨 Themes & Export
+*   **Reading Themes**: Toggle between multiple study aesthetics (Plain, Academic, Futuristic, Dark, Vintage, Notebook).
+*   **Production-Grade PDF Export**: Renders notes with themes faithfully preserved using an in-memory headless Chromium pipeline powered by Playwright.
+
+---
+
+## 📸 Interface Preview
+
+### Home Workspace
+*Placeholder: Home Dashboard and Workspace interface.*
+
+### Generated Notes & Active Themes
+*Placeholder: Visual preview of the Academic and Dark themes.*
+
+### Flashcards & Active Recall
+*Placeholder: Interactive flashcard flip widget in action.*
+
+### Quiz & Weak Concept Detection
+*Placeholder: Multiple-choice quiz interface and revision prompts.*
+
+### PDF Export
+*Placeholder: Print-quality exported PDF document preview.*
+
+---
+
+## 🛠️ Technology Stack
+
+| Component | Technology | Description |
+| :--- | :--- | :--- |
+| **Frontend** | Vanilla JS / CSS3 / HTML5 | Lightweight single-page app with dynamic DOM updates |
+| **Markdown** | Marked.js | Fast, secure rendering of markdown in browser |
+| **Backend** | FastAPI | High-performance Python ASGI web framework |
+| **AI Integration** | Google GenAI SDK | Orchestration and content generation using Gemini 2.5 |
+| **Validation** | Pydantic | Strict, structured JSON schema parsing and verification |
+| **PDF Extraction** | PyMuPDF (fitz) | Efficient server-side parsing of uploaded study guides |
+| **PDF Export** | Playwright (Chromium) | Headless print-to-PDF engine preserving full styles |
+| **Telemetry** | Custom Benchmarking | Automated sweep profiling for prompt latency and token consumption |
+
+---
+
+## 📐 Architecture Flow
 
 ```text
-Paste study material
--> choose learning preferences
--> generate structured notes with Gemini
--> validate the AI response
--> calculate reading time locally
--> safely render notes in the frontend
+       [ User Uploads PDF / Paste Text ]
+                       │
+                       ▼
+            [ FastAPI Backend API ]
+                       │
+                       ▼
+       [ Prompt Builder (Personalization) ]
+                       │
+                       ▼
+         [ Gemini Structured Output ]
+                       │
+                       ▼
+       [ Pydantic Schema Validation ]
+                       │
+                       ▼
+    [ Frontend / HTML5 + Theme Render ] ────► [ Playwright PDF Export ]
 ```
 
-See `docs/PROJECT_CONTEXT.md` for the full product and engineering spec.
+---
 
-## Current Functionality
+## ⚙️ Installation & Setup
 
-- FastAPI backend with `GET /api/v1/health`.
-- `POST /api/v1/notes/generate` for AI-powered personalized notes.
-- Dynamic prompt composition for learning goal, knowledge level, note length,
-  and output format.
-- Structured Gemini response validation with Pydantic.
-- Deterministic reading-time calculation in backend code.
-- Plain HTML/CSS/JavaScript frontend with safe DOM rendering.
+### Backend (FastAPI)
 
-Not included yet: PDF upload, flashcards, quizzes, revision, retests, copy
-notes, PDF export, database, authentication, AWS deployment, or final visual
-design.
+1. Navigate to the backend directory and set up a virtual environment:
+   ```bash
+   cd backend
+   python -m venv .venv
+   source .venv/bin/activate  # On Windows: .venv\Scripts\Activate.ps1
+   pip install -r requirements.txt
+   ```
 
-## Prerequisites
+2. Initialize your local configuration:
+   ```bash
+   cp .env.example .env
+   ```
 
-- Python 3.10+ installed and available on PATH (`python --version`).
-- No Node.js or frontend framework is required.
-- A Gemini API key from Google AI Studio for real notes generation.
+3. Configure your Google AI Studio Gemini API Key inside `.env`:
+   ```env
+   GEMINI_API_KEY=your_gemini_api_key_here
+   GEMINI_MODEL=gemini-2.5-flash
+   GEMINI_TIMEOUT_SECONDS=30
+   ```
 
-All commands below are written for Windows PowerShell.
+4. Run the development server:
+   ```bash
+   uvicorn app.main:app --reload
+   ```
 
-## 1. Backend Setup
+### Frontend (Static Client)
 
-From the repository root:
+1. Launch a static web server from the repository root:
+   ```bash
+   python -m http.server 5500 --directory frontend
+   ```
+2. Open `http://127.0.0.1:5500` in your web browser.
 
-```powershell
+---
+
+## 📊 Benchmarking Framework
+
+MindCraft AI includes an automated telemetry profiling suite to run performance matrices. It tests latency, token consumption (input, output, total), validation overhead, and error rates across all supported configurations.
+
+To run the telemetry suite:
+```bash
 cd backend
-python -m venv .venv
-.\.venv\Scripts\Activate.ps1
-pip install -r requirements.txt
+python ../scripts/benchmark.py
 ```
+This will automatically generate a detailed Markdown profiling report (`benchmark_report.md`) and a comma-separated database (`benchmark_results.csv`) in the repository root.
 
-If PowerShell blocks the activation script with an execution policy error, run:
+---
 
-```powershell
-Set-ExecutionPolicy -Scope Process -ExecutionPolicy RemoteSigned
-```
-
-Then re-run the activation command.
-
-## 2. Configure Environment Variables
-
-Copy the example file:
-
-```powershell
-Copy-Item .env.example .env
-```
-
-Edit only your local `backend/.env` file. Do not commit it.
-
-Required for notes generation:
-
-```text
-GEMINI_API_KEY=your_real_key_here
-```
-
-Optional Gemini settings:
-
-```text
-GEMINI_MODEL=gemini-2.5-flash
-GEMINI_TIMEOUT_SECONDS=30
-```
-
-`GET /api/v1/health` works even when `GEMINI_API_KEY` is not configured. Notes
-generation requires the key and will fail with a sanitized server error without
-it.
-
-## 3. Start the Backend
-
-With the virtual environment active and still inside `backend/`:
-
-```powershell
-uvicorn app.main:app --reload
-```
-
-The API will be available at `http://127.0.0.1:8000`.
-
-Health check:
-
-```powershell
-curl http://127.0.0.1:8000/api/v1/health
-```
-
-Expected response shape:
-
-```json
-{
-  "app_name": "MindCraft AI",
-  "status": "ok",
-  "api_version": "v1"
-}
-```
-
-## 4. Serve the Frontend
-
-Open a new PowerShell window. From the repository root:
-
-```powershell
-python -m http.server 5500 --directory frontend
-```
-
-Open `http://127.0.0.1:5500` in a browser.
-
-If you serve the frontend from a different origin, update `FRONTEND_ORIGIN` in
-`backend/.env`, then restart the backend.
-
-## 5. Run Tests
-
-From the `backend/` directory with the virtual environment active:
-
-```powershell
-python -m unittest discover
-```
-
-The tests cover notes prompt personalization and backend request validation.
-They do not call the real Gemini API.
-
-## 6. Manual Notes Verification
-
-After adding your real `GEMINI_API_KEY` to `backend/.env`:
-
-1. Start the backend.
-2. Serve the frontend.
-3. Open `http://127.0.0.1:5500`.
-4. Click `Check Backend Connection` and confirm the health message appears.
-5. Paste at least 50 characters of study material.
-6. Select one option each for Learning Goal, Knowledge Level, Note Length, and
-   Output Format.
-7. Click `Generate Notes`.
-8. Confirm readable structured notes appear with estimated reading time.
-9. Try different preference combinations and confirm the generated notes change
-   meaningfully.
-
-## Repository Structure
+## 📂 Project Structure
 
 ```text
 MindCraft-AI/
-|
-|-- backend/
-|   |-- app/
-|   |   |-- api/
-|   |   |   |-- v1/
-|   |   |   |   |-- health.py
-|   |   |   |   |-- notes.py
-|   |   |
-|   |   |-- core/
-|   |   |   |-- config.py
-|   |   |
-|   |   |-- prompts/
-|   |   |   |-- notes.py
-|   |   |
-|   |   |-- schemas/
-|   |   |   |-- notes.py
-|   |   |
-|   |   |-- services/
-|   |   |   |-- gemini_errors.py
-|   |   |   |-- gemini_service.py
-|   |   |   |-- notes_service.py
-|   |   |
-|   |   |-- main.py
-|   |
-|   |-- tests/
-|   |-- requirements.txt
-|   |-- .env.example
-|
-|-- frontend/
-|   |-- css/
-|   |   |-- style.css
-|   |-- js/
-|   |   |-- api.js
-|   |   |-- main.js
-|   |-- index.html
-|
-|-- docs/
-|   |-- PROJECT_CONTEXT.md
-|
-|-- .gitignore
-|-- README.md
+├── backend/
+│   ├── app/
+│   │   ├── api/          # Route controllers (notes, documents, export, revision, quiz, flashcards)
+│   │   ├── core/         # App configuration settings and constants
+│   │   ├── prompts/      # AI prompt templates & custom persona engineering
+│   │   ├── schemas/      # Pydantic schema validation models
+│   │   └── services/     # Core engines (gemini, doc parser, export, SRS, etc.)
+│   ├── tests/            # Test suite (endpoint validation, parsing integrity)
+│   └── requirements.txt
+├── frontend/
+│   ├── css/              # Workspace style sheets & reading themes
+│   ├── js/               # API clients and UI handlers (api.js, main.js)
+│   └── index.html        # Main app workspace interface
+└── scripts/
+    └── benchmark.py      # Telemetry & performance sweep benchmarker
 ```
+
+---
+
+## 🗺️ Project Roadmap
+
+- [x] Core dynamic note personalization (Goal, Level, Format, Length)
+- [x] Pydantic structured output validation for LLM responses
+- [x] Flashcards and Quiz active recall modules
+- [x] Adaptive Revision and weak concept retesting
+- [x] Headless Chromium PDF Export using Playwright
+- [x] Custom telemetry benchmarking framework
+- [ ] Multi-document vector search (RAG)
+- [ ] Stateful user profiles and study progress analytics
+- [ ] Collaborative group workspaces and shareable notes
+
+---
+
+## 🤝 Contributing
+Contributions are welcome! Please open an issue or submit a pull request for any bug fixes, styling polishes, or feature additions.
+
+---
+
+## 📄 License
+This project is licensed under the MIT License. See the placeholder file for details.
