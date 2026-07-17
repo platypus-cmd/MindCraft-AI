@@ -43,7 +43,69 @@ class GeminiService:
         prompt: str,
         response_schema: type[StructuredResponseT],
     ) -> StructuredResponseT:
-        """Generate and validate structured Gemini output for a Pydantic schema."""
+        """Generate and validate structured Gemini/DeepSeek output for a Pydantic schema."""
+        if settings.deepseek_api_key:
+            logger.info("Routing structured request to DeepSeek API (%s)...", settings.deepseek_model)
+            import httpx
+            headers = {
+                "Authorization": f"Bearer {settings.deepseek_api_key}",
+                "Content-Type": "application/json"
+            }
+            # Ensure the prompt mentions JSON to satisfy DeepSeek requirements
+            final_prompt = prompt if "json" in prompt.lower() else f"{prompt}\n\nIMPORTANT: Output must be valid JSON."
+            payload = {
+                "model": settings.deepseek_model,
+                "messages": [
+                    {"role": "user", "content": final_prompt}
+                ],
+                "response_format": {
+                    "type": "json_object"
+                },
+                "temperature": 0.2
+            }
+            
+            start_time = time.time()
+            try:
+                async with httpx.AsyncClient(timeout=settings.gemini_timeout_seconds) as client_http:
+                    res = await client_http.post(
+                        "https://api.deepseek.com/chat/completions",
+                        json=payload,
+                        headers=headers
+                    )
+                    res.raise_for_status()
+                    elapsed = time.time() - start_time
+                    res_json = res.json()
+                    
+                    content_str = res_json["choices"][0]["message"]["content"]
+                    usage = res_json.get("usage", {})
+                    prompt_tokens = usage.get("prompt_tokens", 0)
+                    candidates_tokens = usage.get("completion_tokens", 0)
+                    
+                    self.last_metadata = {
+                        "latency": elapsed,
+                        "prompt_tokens": prompt_tokens,
+                        "output_tokens": candidates_tokens,
+                        "total_tokens": prompt_tokens + candidates_tokens
+                    }
+                    
+                    logger.info(
+                        "DeepSeek generation complete: latency=%.2fs, prompt_tokens=%s, output_tokens=%s",
+                        elapsed, prompt_tokens, candidates_tokens
+                    )
+                    
+                    return response_schema.model_validate_json(content_str)
+                    
+            except httpx.HTTPStatusError as exc:
+                logger.error(
+                    "DeepSeek HTTP error: code=%s body=%s",
+                    exc.response.status_code,
+                    exc.response.text
+                )
+                raise GeminiUpstreamError(f"DeepSeek request failed: {exc.response.text}") from exc
+            except Exception as exc:
+                logger.error("DeepSeek request failed: %s", str(exc))
+                raise GeminiUpstreamError("DeepSeek request failed.") from exc
+
         client = self._get_client()
         response = None
         max_attempts = 3

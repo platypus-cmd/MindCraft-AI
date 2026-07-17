@@ -27,6 +27,10 @@ class Settings(BaseSettings):
     gemini_model: str = "gemini-2.5-flash"
     gemini_timeout_seconds: float = 30.0
 
+    # DeepSeek settings
+    deepseek_api_key: str | None = None
+    deepseek_model: str = "deepseek-chat"
+
     # Document (PDF) upload settings. See PROJECT_CONTEXT.md Section 22
     # ("enforce reasonable limits on...PDF file size").
     max_pdf_size_bytes: int = 10 * 1024 * 1024  # 10 MB
