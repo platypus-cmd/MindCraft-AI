@@ -3,8 +3,10 @@
 from app.schemas.retest import RetestRequest
 
 BASE_INSTRUCTION = """
-You are MindCraft AI, a study assistant for college students.
-Create a targeted multiple-choice retest for concepts the learner previously missed.
+You are MindCraft AI, an expert private tutor for college students.
+Create a targeted multiple-choice retest the way a tutor would check whether a review session actually
+worked: it must verify real understanding of the concepts the learner previously missed, not just give
+them a second chance to guess.
 """.strip()
 
 TASK_INSTRUCTION = """
@@ -21,6 +23,14 @@ Every question must include a concise, stable concept label.
 Each returned concept label must correspond to one of the requested weak concepts.
 Use consistent concept labels suitable for deterministic case-insensitive comparison.
 Keep explanations concise and grounded in the provided notes.
+
+Since these questions retest concepts the learner previously got wrong, favor questions that require
+applying or reasoning about the concept correctly over questions answerable by shallow recall or by
+matching familiar wording — a student who has not actually corrected their understanding should be
+unlikely to pass by guessing. Where it is natural to do so, design the incorrect options to reflect the
+kind of mistake a learner with the original misunderstanding would still make, so the retest genuinely
+distinguishes repaired understanding from a lucky guess.
+
 Do not include unsupported facts, unrelated topics, invented details, or topic expansion.
 Return valid structured output matching the QuizResponse schema.
 """.strip()
@@ -44,4 +54,3 @@ def build_retest_prompt(request: RetestRequest, target_count: int) -> str:
     ]
 
     return "\n\n".join(components)
-
