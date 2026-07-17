@@ -21,47 +21,6 @@ from app.services.gemini_errors import (
 
 logger = logging.getLogger(__name__)
 
-MAX_QUIZ_QUESTIONS = 10
-MID_QUIZ_QUESTIONS = 8
-MIN_QUIZ_QUESTIONS = 5
-
-
-def _notes_text_length(notes_response: NotesResponse) -> int:
-    parts = [
-        notes_response.notes.title,
-        notes_response.notes.summary,
-        notes_response.notes.one_minute_revision,
-        *notes_response.notes.key_takeaways,
-    ]
-
-    for section in notes_response.notes.sections:
-        parts.extend(
-            [
-                section.heading,
-                section.content,
-                " ".join(section.key_points),
-                " ".join(item.term for item in section.definitions),
-                " ".join(item.definition for item in section.definitions),
-                " ".join(section.examples),
-                " ".join(section.memory_tricks),
-                " ".join(section.common_mistakes),
-            ]
-        )
-
-    return len(" ".join(part for part in parts if part))
-
-
-def select_quiz_question_count(notes_response: NotesResponse) -> int:
-    """Choose a deterministic quiz question count from the provided notes."""
-    note_text_length = _notes_text_length(notes_response)
-
-    if note_text_length < 300:
-        return MIN_QUIZ_QUESTIONS
-
-    if note_text_length < 650:
-        return MID_QUIZ_QUESTIONS
-
-    return MAX_QUIZ_QUESTIONS
 
 
 class QuizService:
@@ -80,8 +39,7 @@ class QuizService:
         return self._client
 
     async def generate_quiz(self, request: QuizRequest) -> QuizResponse:
-        target_count = select_quiz_question_count(request.notes_response)
-        prompt = build_quiz_prompt(request, target_count)
+        prompt = build_quiz_prompt(request)
         client = self._get_client()
 
         try:

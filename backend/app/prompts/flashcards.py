@@ -10,6 +10,7 @@ Create concise flashcards that help a learner review important concepts from the
 TASK_INSTRUCTION = """
 Use the provided generated notes as the sole grounding material for the flashcards.
 Create exactly {target_count} flashcards.
+Target a difficulty level of: {difficulty}.
 Prioritize important concepts, avoid duplicate cards, avoid trivial cards, and keep each card focused on a single concept.
 Each flashcard must have a clear front and a concise back.
 Do not include unsupported facts, topic expansion, or invented details.
@@ -22,11 +23,11 @@ SOURCE_START = "----- BEGIN PROVIDED NOTES -----"
 SOURCE_END = "----- END PROVIDED NOTES -----"
 
 
-def build_flashcards_prompt(request: FlashcardsRequest, target_count: int) -> str:
+def build_flashcards_prompt(request: FlashcardsRequest) -> str:
     """Build a flashcard prompt from grounded notes and a deterministic target count."""
     components = [
         BASE_INSTRUCTION,
-        TASK_INSTRUCTION.format(target_count=target_count),
+        TASK_INSTRUCTION.format(target_count=request.count, difficulty=request.difficulty),
         SOURCE_START,
         request.notes_response.model_dump_json(),
         SOURCE_END,

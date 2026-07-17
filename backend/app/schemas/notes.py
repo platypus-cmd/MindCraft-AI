@@ -89,3 +89,9 @@ class NotesResponse(BaseModel):
     notes: GeneratedNotesContent
     estimated_reading_time_minutes: int
     config_used: NotesConfigEcho
+
+
+class PdfExportRequest(BaseModel):
+    html_content: str
+    theme_class: str
+

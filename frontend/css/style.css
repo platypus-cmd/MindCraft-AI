@@ -423,3 +423,41 @@ dd {
   margin-bottom: 25px;
   box-shadow: 0 2px 4px rgba(0,0,0,0.05);
 }
+
+/* Action Groups for Settings */
+.action-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  background: #f7f7f8;
+  padding: 10px;
+  border-radius: 6px;
+  border: 1px solid #e5e5ea;
+  font-size: 0.9em;
+}
+
+.action-group-title {
+  font-weight: 600;
+  color: #333;
+}
+
+.action-group-row {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.action-group-row label {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 0.85em;
+  color: #555;
+}
+
+.action-group-row select {
+  padding: 4px 6px;
+  font-size: 0.9em;
+  border-radius: 4px;
+  border: 1px solid #d0d0d5;
+}

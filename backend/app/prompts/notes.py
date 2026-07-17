@@ -64,8 +64,12 @@ NOTE_LENGTH_INSTRUCTIONS: dict[NoteLength, str] = {
         "and revision support for normal study. Set table_of_contents to an empty list."
     ),
     NoteLength.COMPREHENSIVE: (
-        "Note length: Comprehensive. Cover the supplied material thoroughly while staying structured "
-        "and avoiding repetition. Populate table_of_contents with the main section headings."
+        "Note length: Comprehensive. Cover every major concept and every important subtopic. "
+        "Explain every concept in depth. Include multiple examples where appropriate. "
+        "Include key definitions, important terminology, comparisons where useful, common mistakes, "
+        "and practical applications. Include summaries where appropriate. Do not omit intermediate "
+        "concepts for brevity. Prefer depth over conciseness. Maximize useful educational detail "
+        "within the available response size. Populate table_of_contents with the main section headings."
     ),
 }
 

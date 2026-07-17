@@ -22,8 +22,12 @@ class Flashcard(BaseModel):
         return normalized
 
 
+from typing import Literal
+
 class FlashcardsRequest(BaseModel):
     notes_response: NotesResponse
+    difficulty: Literal["easy", "medium", "hard"] = "medium"
+    count: Literal[5, 10, 15, 20] = 10
 
 
 class FlashcardsResponse(BaseModel):

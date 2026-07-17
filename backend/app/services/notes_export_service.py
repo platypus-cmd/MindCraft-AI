@@ -158,3 +158,59 @@ def _escape(text: str) -> str:
         .replace("<", "&lt;")
         .replace(">", "&gt;")
     )
+
+import os
+import asyncio
+from playwright.sync_api import sync_playwright
+
+def _generate_pdf_sync(html_content: str, theme_class: str) -> bytes:
+    current_dir = os.path.dirname(__file__)
+    style_path = os.path.abspath(os.path.join(current_dir, "../../../frontend/css/style.css"))
+    
+    css_content = ""
+    if os.path.exists(style_path):
+        with open(style_path, "r", encoding="utf-8") as f:
+            css_content = f.read()
+            
+    full_html = f"""
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <meta charset="utf-8">
+        <style>
+            {css_content}
+            body {{
+                margin: 0;
+                padding: 0;
+                /* Force background graphics to print */
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+            }}
+        </style>
+    </head>
+    <body>
+        <article id="notes-content" class="{theme_class}">
+            {html_content}
+        </article>
+    </body>
+    </html>
+    """
+
+    with sync_playwright() as p:
+        browser = p.chromium.launch(headless=True)
+        page = browser.new_page()
+        page.set_content(full_html)
+        page.evaluate("document.fonts.ready")
+        pdf_bytes = page.pdf(
+            format="A4",
+            print_background=True,
+            margin={"top": "0.5in", "bottom": "0.5in", "left": "0.5in", "right": "0.5in"}
+        )
+        browser.close()
+        
+    return pdf_bytes
+
+async def generate_notes_pdf_playwright(html_content: str, theme_class: str) -> bytes:
+    """Render HTML to PDF bytes using Playwright and Headless Chromium."""
+    loop = asyncio.get_running_loop()
+    return await loop.run_in_executor(None, _generate_pdf_sync, html_content, theme_class)

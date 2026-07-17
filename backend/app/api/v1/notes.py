@@ -2,7 +2,11 @@
 
 from fastapi import APIRouter, HTTPException, Response, status
 
-from app.schemas.notes import NotesRequest, NotesResponse
+from app.schemas.notes import (
+    NotesRequest,
+    NotesResponse,
+    PdfExportRequest,
+)
 from app.services import notes_export_service, notes_service
 from app.services.gemini_errors import (
     GeminiConfigurationError,
@@ -41,8 +45,10 @@ async def generate_notes(request: NotesRequest) -> NotesResponse:
 
 
 @router.post("/export/pdf")
-async def export_notes_pdf(notes_response: NotesResponse) -> Response:
-    pdf_bytes = notes_export_service.generate_notes_pdf(notes_response)
+async def export_notes_pdf(request: PdfExportRequest) -> Response:
+    pdf_bytes = await notes_export_service.generate_notes_pdf_playwright(
+        request.html_content, request.theme_class
+    )
     return Response(
         content=pdf_bytes,
         media_type="application/pdf",

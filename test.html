@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <link rel="stylesheet" href="frontend/css/style.css" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+</head>
+<body>
+  <article id="notes-content" class="notes-theme-dark">
+    <h3>Test Heading</h3>
+    <p>Test paragraph.</p>
+  </article>
+  <script>
+    setTimeout(() => {
+      const element = document.getElementById("notes-content");
+      html2pdf().from(element).save();
+    }, 1000);
+  </script>
+</body>
+</html>

@@ -1,4 +1,4 @@
-# MindCraft AI â€” Project Context
+﻿# MindCraft AI â€” Project Context
 
 ## 1. Document Purpose
 
@@ -2445,6 +2445,10 @@ Current milestone status:
 * Milestone 7 â€” Adaptive Revision: **Not Started**
 * Milestone 8 â€” Polish: **Not Started**
 * Milestone 9 — Reading Themes: **Complete**
+  * Milestone 10 — Configurable Quiz and Flashcards: **Complete**
+  * Milestone 11 — Theme-Aware PDF Export: **Complete**
+  * Milestone 10 — Configurable Quiz & Flashcards: **Complete**
+  * Milestone 11 — Theme-Aware PDF Export: **Complete**
 * Milestone 10 â€” Documentation: **Not Started**
 
 Milestones 1 through 6 are complete.
@@ -2640,6 +2644,10 @@ Current milestone status:
 * Milestone 7 — Adaptive Revision: **Not Started**
 * Milestone 8 — Polish: **Not Started**
 * Milestone 9 — Reading Themes: **Complete**
+  * Milestone 10 — Configurable Quiz and Flashcards: **Complete**
+  * Milestone 11 — Theme-Aware PDF Export: **Complete**
+  * Milestone 10 — Configurable Quiz & Flashcards: **Complete**
+  * Milestone 11 — Theme-Aware PDF Export: **Complete**
 * Milestone 10 — Documentation: **Not Started**
 
 Milestones 1 through 6 are complete.
@@ -2718,9 +2726,3 @@ Do not assume these Milestone 6 changes are recorded in a commit; the implementa
 * **Keyboard navigation**: Implemented ARIA-compliant left/right arrow key navigation across workspace tabs.
 * **Automatic workspace routing**: After successfully generating Notes, Flashcards, Quizzes, or Revision, the Learning Workspace wrapper is automatically revealed and the active tab is switched appropriately.
 * **Final summary redesign**: Replaced flat text blocks with a clean score interface and `details`/`summary` collapsible elements for incorrect answer reviews.
-
- # #   S t a t e   I n t e g r i t y   V e r i f i c a t i o n 
- *   * * A c c e p t a n c e   C r i t e r i a * * :   V e r i f i e d   m a n u a l l y   v i a   a   c u s t o m   J S D O M   s c r i p t   i n t e r a c t i n g   n a t i v e l y   w i t h   t h e   f r o n t e n d ,   a l l   1 2   c o r e   s t a t e   v a r i a b l e s   ( l a t e s t N o t e s R e s p o n s e ,   l a t e s t F l a s h c a r d s R e s p o n s e ,   o r i g i n a l Q u i z R e s p o n s e ,   l a t e s t R e t e s t R e s p o n s e ,   l a t e s t R e v i s i o n R e s p o n s e ,   c u r r e n t Q u i z M o d e ,   q u i z I n d e x ,    l a s h c a r d I n d e x ,   w e a k C o n c e p t s ,   i n c o r r e c t Q u e s t i o n C o n t e x t s ,   o r i g i n a l Q u i z Q u e s t i o n S t a t e s ,    e t e s t Q u e s t i o n S t a t e s )   c o r r e c t l y   m a i n t a i n   t h e i r   s t a t e   w i t h o u t   m u t a t i n g   a f t e r   r e p e a t e d l y   s w i t c h i n g   t h r o u g h   a l l   w o r k s p a c e   t a b s . 
- *   * * S e p a r a t i o n   o f   R e s p o n s i b i l i t i e s * * :   V e r i f i e d   t h a t   s w i t c h W o r k s p a c e T a b ( )   o p e r a t e s   o n l y   o n   w o r k s p a c e - p a n e l - *   w r a p p e r s   w i t h o u t   t r i g g e r i n g   h i d d e n   b u s i n e s s   l o g i c   i n s i d e   r e n d e r e r s . 
-  
- 

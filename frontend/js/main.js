@@ -502,18 +502,30 @@ async function handleExportPdf() {
   setNotesUtilityMessage("loading", "Exporting PDF...");
 
   try {
-    const pdfBlob = await exportNotesPdf(latestNotesResponse);
-    const objectUrl = URL.createObjectURL(pdfBlob);
-    const downloadLink = document.createElement("a");
+    // Format the date for the filename: MindCraftAI_Notes_<YYYY-MM-DD>.pdf
+    const dateStr = new Date().toISOString().split('T')[0];
+    const filename = `MindCraftAI_Notes_${dateStr}.pdf`;
+    
+    const element = document.getElementById("notes-content");
+    const htmlContent = element.innerHTML;
+    
+    const themeSelect = document.getElementById("notes-theme");
+    const themeClass = themeSelect ? themeSelect.value : "notes-theme-plain";
+    
+    // Call the backend Playwright PDF generator
+    const pdfBlob = await exportNotesPdf(htmlContent, themeClass);
+    
+    // Trigger download
+    const url = URL.createObjectURL(pdfBlob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
 
-    downloadLink.href = objectUrl;
-    downloadLink.download = "mindcraft-notes.pdf";
-    document.body.appendChild(downloadLink);
-    downloadLink.click();
-    downloadLink.remove();
-    URL.revokeObjectURL(objectUrl);
-
-    setNotesUtilityMessage("success", "PDF export started.");
+    setNotesUtilityMessage("success", "PDF export complete.");
   } catch (error) {
     setNotesUtilityMessage("error", error.message || "Could not export PDF.");
   } finally {

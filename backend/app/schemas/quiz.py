@@ -45,8 +45,12 @@ class QuizQuestion(BaseModel):
         return value
 
 
+from typing import Literal
+
 class QuizRequest(BaseModel):
     notes_response: NotesResponse
+    difficulty: Literal["easy", "medium", "hard"] = "medium"
+    count: Literal[5, 10, 15, 20] = 10
 
 
 class QuizResponse(BaseModel):

@@ -111,8 +111,49 @@
           <div id="notes-actions">
             <button id="copy-notes-btn" type="button" disabled>Copy Notes</button>
             <button id="export-pdf-btn" type="button" disabled>Export PDF</button>
-            <button id="generate-flashcards-btn" type="button" disabled>Generate Flashcards</button>
-            <button id="generate-quiz-btn" type="button" disabled>Generate Quiz</button>
+            <div class="action-group">
+              <span class="action-group-title">Flashcard Settings</span>
+              <div class="action-group-row compact">
+                <label>Difficulty:
+                  <select id="flashcard-difficulty">
+                    <option value="easy">Easy</option>
+                    <option value="medium" selected>Medium</option>
+                    <option value="hard">Hard</option>
+                  </select>
+                </label>
+                <label>Cards:
+                  <select id="flashcard-count">
+                    <option value="5">5</option>
+                    <option value="10" selected>10</option>
+                    <option value="15">15</option>
+                    <option value="20">20</option>
+                  </select>
+                </label>
+              </div>
+              <button id="generate-flashcards-btn" type="button" disabled>Generate Flashcards</button>
+            </div>
+            
+            <div class="action-group">
+              <span class="action-group-title">Quiz Settings</span>
+              <div class="action-group-row compact">
+                <label>Difficulty:
+                  <select id="quiz-difficulty">
+                    <option value="easy">Easy</option>
+                    <option value="medium" selected>Medium</option>
+                    <option value="hard">Hard</option>
+                  </select>
+                </label>
+                <label>Questions:
+                  <select id="quiz-count">
+                    <option value="5">5</option>
+                    <option value="10" selected>10</option>
+                    <option value="15">15</option>
+                    <option value="20">20</option>
+                  </select>
+                </label>
+              </div>
+              <button id="generate-quiz-btn" type="button" disabled>Generate Quiz</button>
+            </div>
             <p id="notes-utility-message" data-state="idle"></p>
           </div>
           <div id="notes-meta"></div>
@@ -177,7 +218,7 @@
     </section>
   </main>
 
-  <script src="js/api.js"></script>
-  <script src="js/main.js?v=7"></script>
+  <script src="js/api.js?v=2"></script>
+  <script src="js/main.js?v=8"></script>
 </body>
 </html>

@@ -66,18 +66,27 @@ async function extractPdfText(file) {
   return data;
 }
 
-async function exportNotesPdf(notesResponse) {
+async function exportNotesPdf(htmlContent, themeClass) {
   const response = await fetch(`${API_BASE_URL}/api/v1/notes/export/pdf`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
     },
-    body: JSON.stringify(notesResponse),
+    body: JSON.stringify({
+      html_content: htmlContent,
+      theme_class: themeClass,
+    }),
   });
 
   if (!response.ok) {
     const data = await response.json().catch(() => ({}));
-    throw new Error(data.detail || "PDF export failed.");
+    let errorMessage = "PDF export failed.";
+    if (Array.isArray(data.detail)) {
+      errorMessage = data.detail.map(err => `${err.loc.join('.')}: ${err.msg}`).join(', ');
+    } else if (data.detail) {
+      errorMessage = data.detail;
+    }
+    throw new Error(errorMessage);
   }
 
   return response.blob();

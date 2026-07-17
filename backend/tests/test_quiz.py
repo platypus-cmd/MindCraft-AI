@@ -26,7 +26,7 @@ from app.services.gemini_errors import (
     GeminiTimeoutError,
     GeminiUpstreamError,
 )
-from app.services.quiz_service import select_quiz_question_count
+
 
 
 VALID_NOTES_RESPONSE = NotesResponse(
@@ -138,112 +138,10 @@ class QuizSchemaTests(unittest.TestCase):
 
         self.assertEqual(question.concept, "Photosynthesis")
 
-    def test_target_count_selection_has_deterministic_boundaries(self):
-        short_notes = NotesResponse(
-            notes=GeneratedNotesContent(
-                title="Short",
-                table_of_contents=[],
-                sections=[
-                    NotesSection(
-                        heading="H1",
-                        content="Short content.",
-                        key_points=["A"],
-                        definitions=[],
-                        examples=[],
-                        memory_tricks=[],
-                        common_mistakes=[],
-                    )
-                ],
-                summary="Short summary.",
-                key_takeaways=[],
-                one_minute_revision="Short review.",
-            ),
-            estimated_reading_time_minutes=1,
-            config_used=NotesConfigEcho(
-                learning_goal=LearningGoal.ACADEMIC,
-                knowledge_level=KnowledgeLevel.INTERMEDIATE,
-                note_length=NoteLength.STANDARD,
-                output_format=OutputFormat.STRUCTURED_PARAGRAPHS,
-            ),
-        )
-
-        medium_notes = NotesResponse(
-            notes=GeneratedNotesContent(
-                title="Medium Notes",
-                table_of_contents=[],
-                sections=[
-                    NotesSection(
-                        heading="H1",
-                        content=(
-                            "This medium-sized note set contains enough content to trigger the "
-                            "intermediate quiz target count. It includes several concepts, examples, "
-                            "and clarifications to make the selection deterministic."
-                        ),
-                        key_points=["One", "Two", "Three"],
-                        definitions=[DefinitionItem(term="Term", definition="Definition")],
-                        examples=["Example"],
-                        memory_tricks=["Tip"],
-                        common_mistakes=["Mistake"],
-                    )
-                ],
-                summary="A decent amount of content for quiz generation.",
-                key_takeaways=["Important takeaway"],
-                one_minute_revision="Revision summary.",
-            ),
-            estimated_reading_time_minutes=2,
-            config_used=NotesConfigEcho(
-                learning_goal=LearningGoal.ACADEMIC,
-                knowledge_level=KnowledgeLevel.INTERMEDIATE,
-                note_length=NoteLength.STANDARD,
-                output_format=OutputFormat.STRUCTURED_PARAGRAPHS,
-            ),
-        )
-
-        long_notes = NotesResponse(
-            notes=GeneratedNotesContent(
-                title="Long Notes",
-                table_of_contents=[],
-                sections=[
-                    NotesSection(
-                        heading="H1",
-                        content=(
-                            "This longer note set contains enough supported material that the "
-                            "maximum quiz count should be selected. The content spans multiple "
-                            "concepts and explanations so the selection logic can safely choose the "
-                            "highest supported value."
-                            + (" " * 20)
-                        ),
-                        key_points=["One", "Two", "Three", "Four", "Five"],
-                        definitions=[
-                            DefinitionItem(term="Term", definition="Definition"),
-                            DefinitionItem(term="Another", definition="Another definition"),
-                        ],
-                        examples=["Example one", "Example two", "Example three"],
-                        memory_tricks=["Tip one", "Tip two"],
-                        common_mistakes=["Mistake one", "Mistake two"],
-                    )
-                ],
-                summary=("A much longer summary with additional content to exceed the safe threshold. " * 15),
-                key_takeaways=["One", "Two", "Three", "Four"],
-                one_minute_revision="A longer revision summary with additional detail.",
-            ),
-            estimated_reading_time_minutes=2,
-            config_used=NotesConfigEcho(
-                learning_goal=LearningGoal.ACADEMIC,
-                knowledge_level=KnowledgeLevel.INTERMEDIATE,
-                note_length=NoteLength.STANDARD,
-                output_format=OutputFormat.STRUCTURED_PARAGRAPHS,
-            ),
-        )
-
-        self.assertEqual(select_quiz_question_count(short_notes), 5)
-        self.assertEqual(select_quiz_question_count(medium_notes), 8)
-        self.assertEqual(select_quiz_question_count(long_notes), 10)
-
     def test_prompt_requests_exact_target_count_and_grounding_rules(self):
-        prompt = build_quiz_prompt(QuizRequest(notes_response=VALID_NOTES_RESPONSE), 8)
+        prompt = build_quiz_prompt(QuizRequest(notes_response=VALID_NOTES_RESPONSE, count=10, difficulty="medium"))
 
-        self.assertIn("exactly 8 questions", prompt.lower())
+        self.assertIn("exactly 10 questions", prompt.lower())
         self.assertIn("provided notes", prompt.lower())
         self.assertIn("avoid duplicate questions", prompt.lower())
         self.assertIn("avoid trivial questions", prompt.lower())
@@ -251,20 +149,20 @@ class QuizSchemaTests(unittest.TestCase):
         self.assertIn("prompt-injection", prompt.lower())
 
     def test_prompt_requires_one_concept_label_per_question(self):
-        prompt = build_quiz_prompt(QuizRequest(notes_response=VALID_NOTES_RESPONSE), 8)
+        prompt = build_quiz_prompt(QuizRequest(notes_response=VALID_NOTES_RESPONSE, count=10, difficulty="medium"))
 
         self.assertIn("each question must include a concept field", prompt.lower())
         self.assertIn("one concise concept or topic label", prompt.lower())
         self.assertIn("primary concept tested", prompt.lower())
 
     def test_prompt_requires_concept_labels_grounded_in_notes(self):
-        prompt = build_quiz_prompt(QuizRequest(notes_response=VALID_NOTES_RESPONSE), 8)
+        prompt = build_quiz_prompt(QuizRequest(notes_response=VALID_NOTES_RESPONSE, count=10, difficulty="medium"))
 
         self.assertIn("ground every concept label only in the provided notes", prompt.lower())
         self.assertIn("do not invent unsupported topics", prompt.lower())
 
     def test_prompt_requires_concept_labels_for_case_insensitive_grouping(self):
-        prompt = build_quiz_prompt(QuizRequest(notes_response=VALID_NOTES_RESPONSE), 8)
+        prompt = build_quiz_prompt(QuizRequest(notes_response=VALID_NOTES_RESPONSE, count=10, difficulty="medium"))
 
         self.assertIn("deterministic case-insensitive grouping", prompt.lower())
         self.assertIn("consistent wording for the same concept", prompt.lower())

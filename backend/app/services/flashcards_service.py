@@ -21,53 +21,6 @@ from app.services.gemini_errors import (
 
 logger = logging.getLogger(__name__)
 
-MAX_FLASHCARDS = 10
-MID_FLASHCARDS = 6
-MIN_FLASHCARDS = 4
-
-
-def _notes_text_length(notes_response: NotesResponse) -> int:
-    parts = [
-        notes_response.notes.title,
-        notes_response.notes.summary,
-        notes_response.notes.one_minute_revision,
-        *notes_response.notes.key_takeaways,
-    ]
-
-    for section in notes_response.notes.sections:
-        parts.extend(
-            [
-                section.heading,
-                section.content,
-                " ".join(section.key_points),
-                " ".join(item.term for item in section.definitions),
-                " ".join(item.definition for item in section.definitions),
-                " ".join(section.examples),
-                " ".join(section.memory_tricks),
-                " ".join(section.common_mistakes),
-            ]
-        )
-
-    return len(" ".join(part for part in parts if part))
-
-
-def select_flashcard_target_count(notes_response: NotesResponse) -> int:
-    """Choose a deterministic flashcard target count from the provided notes.
-
-    Version 1 uses simple thresholds based on note substance rather than
-    configurable quantity settings. Short notes receive a conservative count,
-    medium notes receive a balanced count, and noticeably longer notes receive
-    the safe maximum.
-    """
-    note_text_length = _notes_text_length(notes_response)
-
-    if note_text_length < 700:
-        return MIN_FLASHCARDS
-
-    if note_text_length < 1400:
-        return MID_FLASHCARDS
-
-    return MAX_FLASHCARDS
 
 
 class FlashcardsService:
@@ -86,8 +39,7 @@ class FlashcardsService:
         return self._client
 
     async def generate_flashcards(self, request: FlashcardsRequest) -> FlashcardsResponse:
-        target_count = select_flashcard_target_count(request.notes_response)
-        prompt = build_flashcards_prompt(request, target_count)
+        prompt = build_flashcards_prompt(request)
         client = self._get_client()
 
         try:
