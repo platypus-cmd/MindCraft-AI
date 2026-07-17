@@ -1,5 +1,0 @@
-input_name,test_id,learning_goal,knowledge_level,note_length,output_format,success,prompt_tokens,output_tokens,total_tokens,time_prompt_construction,time_gemini_generation,time_validation,time_total,reading_time,num_sections,timeout,error_message
-Physics (STEM),Unoptimized_Baseline,exam_revision,intermediate,comprehensive,structured_paragraphs,True,3328,3554,6882,0.0001,30.80,0.05,30.85,4,4,False,
-Physics (STEM),Step1_Relaxed_JSON_Arrays,exam_revision,intermediate,comprehensive,structured_paragraphs,True,3310,3109,6419,0.0001,30.98,0.05,31.03,4,4,False,
-Physics (STEM),Step2_Condensed_Dimensions,exam_revision,intermediate,comprehensive,structured_paragraphs,True,3164,3074,6238,0.0001,24.28,0.05,24.33,4,4,False,
-Physics (STEM),Step3_Fully_Optimized,exam_revision,intermediate,comprehensive,structured_paragraphs,True,2587,2464,5051,0.0001,28.86,0.05,28.91,3,3,False,
