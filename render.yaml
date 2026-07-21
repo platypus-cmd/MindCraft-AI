@@ -12,3 +12,5 @@ services:
         value: production
       - key: CORS_ALLOWED_ORIGINS
         value: "https://mindcraft-ai.vercel.app"
+      - key: PLAYWRIGHT_BROWSERS_PATH
+        value: "0"
