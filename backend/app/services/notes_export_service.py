@@ -199,15 +199,17 @@ def _generate_pdf_sync(html_content: str, theme_class: str) -> bytes:
 
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True)
-        page = browser.new_page()
-        page.set_content(full_html)
-        page.evaluate("document.fonts.ready")
-        pdf_bytes = page.pdf(
-            format="A4",
-            print_background=True,
-            margin={"top": "0.5in", "bottom": "0.5in", "left": "0.5in", "right": "0.5in"}
-        )
-        browser.close()
+        try:
+            page = browser.new_page()
+            page.set_content(full_html)
+            page.evaluate("document.fonts.ready")
+            pdf_bytes = page.pdf(
+                format="A4",
+                print_background=True,
+                margin={"top": "0.5in", "bottom": "0.5in", "left": "0.5in", "right": "0.5in"}
+            )
+        finally:
+            browser.close()
         
     return pdf_bytes
 

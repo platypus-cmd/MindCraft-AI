@@ -46,13 +46,19 @@ async def generate_notes(request: NotesRequest) -> NotesResponse:
 
 @router.post("/export/pdf")
 async def export_notes_pdf(request: PdfExportRequest) -> Response:
-    pdf_bytes = await notes_export_service.generate_notes_pdf_playwright(
-        request.html_content, request.theme_class
-    )
-    return Response(
-        content=pdf_bytes,
-        media_type="application/pdf",
-        headers={
-            "Content-Disposition": 'attachment; filename="mindcraft-notes.pdf"',
-        },
-    )
+    try:
+        pdf_bytes = await notes_export_service.generate_notes_pdf_playwright(
+            request.html_content, request.theme_class
+        )
+        return Response(
+            content=pdf_bytes,
+            media_type="application/pdf",
+            headers={
+                "Content-Disposition": 'attachment; filename="mindcraft-notes.pdf"',
+            },
+        )
+    except Exception as exc:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to generate PDF. The document generation service may be unavailable or misconfigured."
+        ) from exc

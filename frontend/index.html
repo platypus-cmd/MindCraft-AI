@@ -3,101 +3,135 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>MindCraft AI - Notes Vertical Slice</title>
-  <link rel="stylesheet" href="css/style.css" />
+  <title>MindCraft AI — AI-Powered Learning Workspace</title>
+  <link rel="icon" type="image/svg+xml" href="favicon.svg" />
+  <meta name="description" content="Transform study material into AI-powered notes, flashcards, quizzes, and adaptive revision with MindCraft AI." />
+  <link rel="stylesheet" href="css/style.css?v=2" />
 </head>
 <body>
-  <main>
-    <h1>MindCraft AI</h1>
-    <p>Paste study material, choose how you want to learn, and generate personalized notes.</p>
 
+  <!-- ═══════════════════════════════════════════════════════
+       TOP NAVIGATION HEADER
+       ═══════════════════════════════════════════════════════ -->
+  <header class="app-header">
+    <a class="app-header__brand" href="#">
+      <div class="app-header__logo" aria-hidden="true">M</div>
+      <span class="app-header__title">MindCraft AI</span>
+    </a>
+
+    <div class="app-header__actions">
+      <button id="new-session-btn" class="btn-ghost" type="button" title="Start New Session" hidden>↻ New</button>
+    </div>
+  </header>
+
+  <!-- ═══════════════════════════════════════════════════════
+       MAIN CONTENT
+       ═══════════════════════════════════════════════════════ -->
+  <div class="app-main">
+
+    <!-- Backend Connection (compact inline bar) -->
     <section id="connection-check">
       <h2>Backend Connection</h2>
       <p id="status-text" data-state="idle">Not checked yet.</p>
-      <button id="check-connection-btn" type="button">Check Backend Connection</button>
+      <button id="check-connection-btn" type="button">Check</button>
     </section>
 
+    <!-- ─────────────────────────────────────────────────────
+         NOTES WORKSPACE — Upload & Configuration
+         ───────────────────────────────────────────────────── -->
     <section id="notes-workspace" aria-labelledby="notes-heading">
-      <h2 id="notes-heading">Generate Notes</h2>
+      <h2 id="notes-heading">Create your study workspace</h2>
+      <p style="color: var(--color-text-tertiary); margin-bottom: var(--space-6); font-size: var(--text-body);">Upload a PDF or paste study material, configure your learning preferences, and let AI generate personalized notes.</p>
 
+      <!-- PDF Upload -->
       <div id="pdf-upload">
-        <label for="pdf-file">Or upload a PDF to extract text from</label>
+        <label for="pdf-file">Upload a PDF to extract text</label>
         <input id="pdf-file" name="pdf_file" type="file" accept="application/pdf" />
         <button id="extract-pdf-btn" type="button">Extract Text</button>
         <p id="pdf-message" data-state="idle"></p>
       </div>
 
-      <form id="notes-form">
-        <label for="source-text">Source material</label>
+      <!-- Notes Form -->
+      <form id="notes-form" class="prompt-box">
+        <label for="source-text" class="visually-hidden">Source material</label>
         <textarea
           id="source-text"
           name="source_text"
-          rows="12"
+          rows="8"
           minlength="50"
           maxlength="20000"
-          placeholder="Paste at least 50 characters of study material here."
+          placeholder="Paste at least 50 characters of study material here…"
           required
         ></textarea>
         <p id="source-help">50 to 20,000 characters after trimming.</p>
 
-        <div class="controls-grid">
-          <label>
-            Learning Goal
-            <select id="learning-goal" name="learning_goal">
-              <option value="academic">Academic</option>
-              <option value="exam_revision">Exam Revision</option>
-              <option value="deep_understanding">Deep Understanding</option>
-              <option value="explain_simply">Explain Simply</option>
-            </select>
-          </label>
+        <div class="prompt-box__controls">
+          <div class="controls-inline">
+            <label>
+              Goal
+              <select id="learning-goal" name="learning_goal">
+                <option value="academic">Academic</option>
+                <option value="exam_revision">Exam Revision</option>
+                <option value="deep_understanding">Deep Understanding</option>
+                <option value="explain_simply">Explain Simply</option>
+              </select>
+            </label>
 
-          <label>
-            Knowledge Level
-            <select id="knowledge-level" name="knowledge_level">
-              <option value="beginner">Beginner</option>
-              <option value="intermediate" selected>Intermediate</option>
-              <option value="advanced">Advanced</option>
-            </select>
-          </label>
+            <label>
+              Level
+              <select id="knowledge-level" name="knowledge_level">
+                <option value="beginner">Beginner</option>
+                <option value="intermediate" selected>Intermediate</option>
+                <option value="advanced">Advanced</option>
+              </select>
+            </label>
 
-          <label>
-            Note Length
-            <select id="note-length" name="note_length">
-              <option value="quick_review">Quick Review</option>
-              <option value="standard" selected>Standard</option>
-              <option value="comprehensive">Comprehensive</option>
-            </select>
-          </label>
+            <label>
+              Length
+              <select id="note-length" name="note_length">
+                <option value="quick_review">Quick Review</option>
+                <option value="standard" selected>Standard</option>
+                <option value="comprehensive">Comprehensive</option>
+              </select>
+            </label>
 
-          <label>
-            Output Format
-            <select id="output-format" name="output_format">
-              <option value="structured_paragraphs" selected>Structured Paragraphs</option>
-              <option value="bullet_points">Bullet Points</option>
-              <option value="cornell_notes">Cornell Notes</option>
-              <option value="outline">Outline</option>
-            </select>
-          </label>
+            <label>
+              Format
+              <select id="output-format" name="output_format">
+                <option value="structured_paragraphs" selected>Structured Paragraphs</option>
+                <option value="bullet_points">Bullet Points</option>
+                <option value="cornell_notes">Cornell Notes</option>
+                <option value="outline">Outline</option>
+              </select>
+            </label>
 
-          <label>
-            <span>Reading Theme:</span>
-            <select id="notes-theme" name="notes_theme">
-              <option value="notes-theme-plain" selected>Plain</option>
-              <option value="notes-theme-academic">Academic</option>
-              <option value="notes-theme-futuristic">Futuristic</option>
-              <option value="notes-theme-dark">Dark</option>
-              <option value="notes-theme-vintage">Vintage</option>
-              <option value="notes-theme-notebook">Notebook</option>
-            </select>
-          </label>
+            <label>
+              Theme
+              <select id="notes-theme" name="notes_theme">
+                <option value="notes-theme-plain" selected>Plain</option>
+                <option value="notes-theme-academic">Academic</option>
+                <option value="notes-theme-futuristic">Futuristic</option>
+                <option value="notes-theme-dark">Dark</option>
+                <option value="notes-theme-vintage">Vintage</option>
+                <option value="notes-theme-notebook">Notebook</option>
+              </select>
+            </label>
+          </div>
+
+          <div class="prompt-box__submit">
+            <p id="notes-message" data-state="idle"></p>
+            <button id="generate-notes-btn" type="submit" class="btn-primary">Generate Notes</button>
+          </div>
         </div>
-
-        <p id="notes-message" data-state="idle"></p>
-        <button id="generate-notes-btn" type="submit">Generate Notes</button>
       </form>
     </section>
 
+    <!-- ─────────────────────────────────────────────────────
+         LEARNING WORKSPACE — Tabs & Content
+         ───────────────────────────────────────────────────── -->
     <section id="learning-workspace" hidden>
+
+      <!-- Segmented Tab Bar -->
       <nav id="workspace-tabs" role="tablist">
         <button id="workspace-tab-notes" role="tab" aria-selected="true" aria-controls="workspace-panel-notes" type="button">Notes</button>
         <button id="workspace-tab-flashcards" role="tab" aria-selected="false" aria-controls="workspace-panel-flashcards" type="button">Flashcards</button>
@@ -105,70 +139,79 @@
         <button id="workspace-tab-revision" role="tab" aria-selected="false" aria-controls="workspace-panel-revision" type="button">Revision</button>
       </nav>
 
+      <!-- ── NOTES PANEL ── -->
       <div id="workspace-panel-notes" role="tabpanel" aria-labelledby="workspace-tab-notes">
         <section id="notes-output" aria-labelledby="notes-output-heading">
           <h2 id="notes-output-heading">Generated Notes</h2>
+
           <div id="notes-actions">
-            <button id="copy-notes-btn" type="button" disabled>Copy Notes</button>
-            <button id="export-pdf-btn" type="button" disabled>Export PDF</button>
-            <div class="action-group">
-              <span class="action-group-title">Flashcard Settings</span>
-              <div class="action-group-row compact">
-                <label>Difficulty:
-                  <select id="flashcard-difficulty">
-                    <option value="easy">Easy</option>
-                    <option value="medium" selected>Medium</option>
-                    <option value="hard">Hard</option>
-                  </select>
-                </label>
-                <label>Cards:
-                  <select id="flashcard-count">
-                    <option value="5">5</option>
-                    <option value="10" selected>10</option>
-                    <option value="15">15</option>
-                    <option value="20">20</option>
-                  </select>
-                </label>
-              </div>
-              <button id="generate-flashcards-btn" type="button" disabled>Generate Flashcards</button>
+            <div class="document-actions">
+              <p id="notes-utility-message" data-state="idle"></p>
+              <button id="copy-notes-btn" type="button" class="btn-ghost" disabled title="Copy to clipboard">📋 Copy</button>
+              <button id="export-pdf-btn" type="button" class="btn-ghost" disabled title="Export to PDF">📄 Export PDF</button>
             </div>
-            
-            <div class="action-group">
-              <span class="action-group-title">Quiz Settings</span>
-              <div class="action-group-row compact">
-                <label>Difficulty:
-                  <select id="quiz-difficulty">
-                    <option value="easy">Easy</option>
-                    <option value="medium" selected>Medium</option>
-                    <option value="hard">Hard</option>
-                  </select>
-                </label>
-                <label>Questions:
-                  <select id="quiz-count">
-                    <option value="5">5</option>
-                    <option value="10" selected>10</option>
-                    <option value="15">15</option>
-                    <option value="20">20</option>
-                  </select>
-                </label>
+
+            <div class="learning-actions">
+              <div class="action-group inline-group">
+                <span class="action-group-title">Flashcards</span>
+                <div class="action-group-controls">
+                  <label>
+                    <select id="flashcard-difficulty" class="minimal-select">
+                      <option value="easy">Easy</option>
+                      <option value="medium" selected>Medium</option>
+                      <option value="hard">Hard</option>
+                    </select>
+                  </label>
+                  <label>
+                    <select id="flashcard-count" class="minimal-select">
+                      <option value="5">5 cards</option>
+                      <option value="10" selected>10 cards</option>
+                      <option value="15">15 cards</option>
+                      <option value="20">20 cards</option>
+                    </select>
+                  </label>
+                  <button id="generate-flashcards-btn" type="button" class="btn-secondary btn-sm" disabled>Generate</button>
+                </div>
               </div>
-              <button id="generate-quiz-btn" type="button" disabled>Generate Quiz</button>
+
+              <div class="action-group inline-group">
+                <span class="action-group-title">Quiz</span>
+                <div class="action-group-controls">
+                  <label>
+                    <select id="quiz-difficulty" class="minimal-select">
+                      <option value="easy">Easy</option>
+                      <option value="medium" selected>Medium</option>
+                      <option value="hard">Hard</option>
+                    </select>
+                  </label>
+                  <label>
+                    <select id="quiz-count" class="minimal-select">
+                      <option value="5">5 questions</option>
+                      <option value="10" selected>10 questions</option>
+                      <option value="15">15 questions</option>
+                      <option value="20">20 questions</option>
+                    </select>
+                  </label>
+                  <button id="generate-quiz-btn" type="button" class="btn-secondary btn-sm" disabled>Generate</button>
+                </div>
+              </div>
             </div>
-            <p id="notes-utility-message" data-state="idle"></p>
           </div>
+
           <div id="notes-meta"></div>
           <article id="notes-content"></article>
         </section>
       </div>
 
+      <!-- ── FLASHCARDS PANEL ── -->
       <div id="workspace-panel-flashcards" role="tabpanel" aria-labelledby="workspace-tab-flashcards" hidden>
         <section id="flashcards-output" aria-labelledby="flashcards-heading">
           <h2 id="flashcards-heading">Flashcards</h2>
           <p id="flashcards-message" data-state="idle"></p>
           <div id="flashcard-controls" class="flashcard-controls">
-            <button id="flashcard-prev-btn" type="button" disabled>Previous</button>
+            <button id="flashcard-prev-btn" type="button" disabled>← Previous</button>
             <span id="flashcard-progress">0 / 0</span>
-            <button id="flashcard-next-btn" type="button" disabled>Next</button>
+            <button id="flashcard-next-btn" type="button" disabled>Next →</button>
           </div>
           <button id="flashcard-flip-btn" type="button">Show Answer</button>
           <div id="flashcard-card" class="flashcard-card" aria-live="polite">
@@ -178,14 +221,15 @@
         </section>
       </div>
 
+      <!-- ── QUIZ PANEL ── -->
       <div id="workspace-panel-quiz" role="tabpanel" aria-labelledby="workspace-tab-quiz" hidden>
         <section id="quiz-output" aria-labelledby="quiz-heading">
           <h2 id="quiz-heading">Quiz</h2>
           <p id="quiz-message" data-state="idle"></p>
           <div id="quiz-controls" class="flashcard-controls">
-            <button id="quiz-prev-btn" type="button" disabled>Previous</button>
+            <button id="quiz-prev-btn" type="button" disabled>← Previous</button>
             <span id="quiz-progress">0 / 0</span>
-            <button id="quiz-next-btn" type="button" disabled>Next</button>
+            <button id="quiz-next-btn" type="button" disabled>Next →</button>
             <button id="quiz-first-unanswered-btn" type="button" hidden style="margin-left: auto;">Go to First Unanswered</button>
           </div>
           <p id="quiz-score" class="quiz-score">Score: 0 / 0</p>
@@ -207,6 +251,7 @@
         </section>
       </div>
 
+      <!-- ── REVISION PANEL ── -->
       <div id="workspace-panel-revision" role="tabpanel" aria-labelledby="workspace-tab-revision" hidden>
         <section id="revision-output" aria-labelledby="revision-heading">
           <h2 id="revision-heading">Focused Revision</h2>
@@ -216,10 +261,23 @@
         </section>
       </div>
     </section>
-  </main>
 
-  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-  <script src="js/api.js?v=3"></script>
-  <script src="js/main.js?v=9"></script>
+  </div><!-- /.app-main -->
+
+  <!-- Toast notification container -->
+  <div id="toast-container" class="toast-container" aria-live="polite"></div>
+
+  <!-- Drop overlay for drag-and-drop -->
+  <div id="drop-overlay" class="drop-overlay" aria-hidden="true">
+    <div class="drop-overlay__content">
+      <div class="drop-overlay__icon">📄</div>
+      <div class="drop-overlay__text">Drop your PDF here</div>
+      <div class="drop-overlay__subtext">We'll extract the text automatically</div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/marked@15.0.4/marked.min.js"></script>
+  <script src="js/api.js?v=4"></script>
+  <script src="js/main.js?v=12"></script>
 </body>
 </html>

@@ -6,7 +6,9 @@
  * (JavaScript coding standards).
  */
 
-const API_BASE_URL = "http://127.0.0.1:8000";
+const API_BASE_URL = (window.location.hostname === "127.0.0.1" || window.location.hostname === "localhost") 
+  ? "http://127.0.0.1:8000" 
+  : "";
 
 /**
  * Calls GET /api/v1/health on the backend.
@@ -92,13 +94,17 @@ async function exportNotesPdf(htmlContent, themeClass) {
   return response.blob();
 }
 
-async function generateFlashcards(notesResponse) {
+async function generateFlashcards(notesResponse, count = 10, difficulty = "medium") {
   const response = await fetch(`${API_BASE_URL}/api/v1/flashcards/generate`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
     },
-    body: JSON.stringify({ notes_response: notesResponse }),
+    body: JSON.stringify({ 
+      notes_response: notesResponse,
+      count: count,
+      difficulty: difficulty
+    }),
   });
 
   const data = await response.json().catch(() => ({}));
@@ -110,13 +116,17 @@ async function generateFlashcards(notesResponse) {
   return data;
 }
 
-async function generateQuiz(notesResponse) {
+async function generateQuiz(notesResponse, count = 10, difficulty = "medium") {
   const response = await fetch(`${API_BASE_URL}/api/v1/quiz/generate`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
     },
-    body: JSON.stringify({ notes_response: notesResponse }),
+    body: JSON.stringify({ 
+      notes_response: notesResponse,
+      count: count,
+      difficulty: difficulty
+    }),
   });
 
   const data = await response.json().catch(() => ({}));

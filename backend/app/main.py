@@ -13,14 +13,12 @@ from app.core.config import settings
 
 app = FastAPI(title=settings.app_name)
 
-# CORS: only allow the configured local frontend origin.
-# Section 30 (Security Requirements) requires CORS to be configured only
-# for required origins, not left open.
+# CORS: only allow the configured local/production frontend origins.
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[settings.frontend_origin],
+    allow_origins=settings.get_cors_origins,
     allow_credentials=True,
-    allow_methods=["*"],
+    allow_methods=["GET", "POST", "OPTIONS"],
     allow_headers=["*"],
 )
 

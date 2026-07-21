@@ -32,19 +32,19 @@
 ## 📸 Interface Preview
 
 ### Home Workspace
-*Placeholder: Home Dashboard and Workspace interface.*
+
 
 ### Generated Notes & Active Themes
-*Placeholder: Visual preview of the Academic and Dark themes.*
+
 
 ### Flashcards & Active Recall
-*Placeholder: Interactive flashcard flip widget in action.*
+
 
 ### Quiz & Weak Concept Detection
-*Placeholder: Multiple-choice quiz interface and revision prompts.*
+
 
 ### PDF Export
-*Placeholder: Print-quality exported PDF document preview.*
+
 
 ---
 

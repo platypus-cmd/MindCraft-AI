@@ -3,6 +3,9 @@
  * Network calls live in api.js; this file only updates the UI.
  */
 
+/* ============================================================
+   DOM REFERENCES
+   ============================================================ */
 const statusTextEl = document.getElementById("status-text");
 const checkButtonEl = document.getElementById("check-connection-btn");
 const notesFormEl = document.getElementById("notes-form");
@@ -64,6 +67,11 @@ const panelNotesEl = document.getElementById("workspace-panel-notes");
 const panelFlashcardsEl = document.getElementById("workspace-panel-flashcards");
 const panelQuizEl = document.getElementById("workspace-panel-quiz");
 const panelRevisionEl = document.getElementById("workspace-panel-revision");
+const newSessionBtn = document.getElementById("new-session-btn");
+
+/* ============================================================
+   STATE
+   ============================================================ */
 let isGeneratingNotes = false;
 let isExtractingPdf = false;
 let isExportingPdf = false;
@@ -90,6 +98,173 @@ let quizIndex = 0;
 let quizQuestionStates = [];
 let activeWorkspaceTab = "notes";
 
+
+/* ============================================================
+   TOAST NOTIFICATION SYSTEM
+   ============================================================ */
+const toastContainer = document.getElementById("toast-container");
+
+function showToast(message, type = "info", duration = 4000) {
+  const toast = document.createElement("div");
+  toast.className = `toast toast--${type}`;
+
+  const icons = { success: "✓", error: "✕", info: "ℹ" };
+  toast.innerHTML = `
+    <span class="toast__icon">${icons[type] || icons.info}</span>
+    <span class="toast__message">${message}</span>
+  `;
+
+  toastContainer.appendChild(toast);
+
+  setTimeout(() => {
+    toast.classList.add("toast--exiting");
+    toast.addEventListener("animationend", () => toast.remove());
+  }, duration);
+}
+
+
+/* ============================================================
+   STAGED LOADING — AI Generation UX Feedback
+   ============================================================ */
+const LOADING_STAGES = [
+  "Reading your material…",
+  "Understanding key concepts…",
+  "Building your study notes…",
+  "Finalizing your workspace…",
+];
+
+const FLASHCARD_LOADING_STAGES = [
+  "Analyzing your notes…",
+  "Creating question-answer pairs…",
+  "Building your flashcards…",
+];
+
+const QUIZ_LOADING_STAGES = [
+  "Analyzing your notes…",
+  "Crafting questions…",
+  "Building your quiz…",
+];
+
+const REVISION_LOADING_STAGES = [
+  "Reviewing weak concepts…",
+  "Building focused explanations…",
+  "Preparing your revision material…",
+];
+
+const RETEST_LOADING_STAGES = [
+  "Designing targeted questions…",
+  "Building your retest…",
+];
+
+function createStagedLoader(container, stages) {
+  const wrapper = document.createElement("div");
+  wrapper.className = "loading-status fade-in";
+
+  const spinner = document.createElement("div");
+  spinner.className = "loading-status__spinner";
+
+  const text = document.createElement("div");
+  text.className = "loading-status__text";
+  text.textContent = stages[0];
+
+  const subtext = document.createElement("div");
+  subtext.className = "loading-status__subtext";
+  subtext.textContent = "This may take a few moments";
+
+  wrapper.appendChild(spinner);
+  wrapper.appendChild(text);
+  wrapper.appendChild(subtext);
+  container.appendChild(wrapper);
+
+  let stageIndex = 0;
+  const interval = setInterval(() => {
+    stageIndex++;
+    if (stageIndex < stages.length) {
+      text.style.opacity = "0";
+      setTimeout(() => {
+        text.textContent = stages[stageIndex];
+        text.style.opacity = "1";
+      }, 200);
+    }
+  }, 3000);
+
+  return { 
+    stop: () => {
+      clearInterval(interval);
+      wrapper.remove();
+    } 
+  };
+}
+
+function createSkeletonLoader(container) {
+  const skeleton = document.createElement("div");
+  skeleton.className = "skeleton-container";
+
+  skeleton.innerHTML = `
+    <div class="skeleton-line skeleton-line--title"></div>
+    <div class="skeleton-line skeleton-line--full"></div>
+    <div class="skeleton-line skeleton-line--long"></div>
+    <div class="skeleton-line skeleton-line--medium"></div>
+    <div class="skeleton-line skeleton-line--full"></div>
+    <div class="skeleton-line skeleton-line--short"></div>
+    <div class="skeleton-block"></div>
+    <div class="skeleton-line skeleton-line--long"></div>
+    <div class="skeleton-line skeleton-line--medium"></div>
+    <div class="skeleton-line skeleton-line--full"></div>
+  `;
+
+  container.appendChild(skeleton);
+}
+
+
+/* ============================================================
+   DRAG & DROP
+   ============================================================ */
+const dropOverlay = document.getElementById("drop-overlay");
+let dragCounter = 0;
+
+document.addEventListener("dragenter", (e) => {
+  e.preventDefault();
+  dragCounter++;
+  if (e.dataTransfer.types.includes("Files")) {
+    dropOverlay.classList.add("active");
+  }
+});
+
+document.addEventListener("dragleave", (e) => {
+  e.preventDefault();
+  dragCounter--;
+  if (dragCounter <= 0) {
+    dragCounter = 0;
+    dropOverlay.classList.remove("active");
+  }
+});
+
+document.addEventListener("dragover", (e) => {
+  e.preventDefault();
+});
+
+document.addEventListener("drop", (e) => {
+  e.preventDefault();
+  dragCounter = 0;
+  dropOverlay.classList.remove("active");
+
+  const files = e.dataTransfer.files;
+  if (files.length > 0 && files[0].type === "application/pdf") {
+    // Set the file to the input and trigger extraction
+    const dataTransfer = new DataTransfer();
+    dataTransfer.items.add(files[0]);
+    pdfFileEl.files = dataTransfer.files;
+    handleExtractPdf();
+  } else if (files.length > 0) {
+    showToast("Please upload a PDF file.", "error");
+  }
+});
+
+
+/* ============================================================
+   TAB SWITCHING
+   ============================================================ */
 function switchWorkspaceTab(tabName) {
   const tabs = {
     notes: { btn: tabNotesBtn, panel: panelNotesEl },
@@ -110,7 +285,9 @@ function switchWorkspaceTab(tabName) {
       btn.setAttribute("aria-selected", isActive ? "true" : "false");
       if (isActive) {
         panel.removeAttribute("hidden");
-        // Maintain smooth UX by ensuring the user starts at the top of the newly shown panel
+        panel.classList.add("fade-in");
+        // Remove animation class after completion to allow re-trigger
+        panel.addEventListener("animationend", () => panel.classList.remove("fade-in"), { once: true });
         panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
       } else {
         panel.setAttribute("hidden", "");
@@ -118,6 +295,11 @@ function switchWorkspaceTab(tabName) {
     }
   });
 }
+
+
+/* ============================================================
+   QUIZ STATE HELPERS (unchanged logic)
+   ============================================================ */
 function createEmptyQuizStates(response) {
   if (!response || !Array.isArray(response.questions)) {
     return [];
@@ -183,6 +365,10 @@ function clearAdaptiveCycleState() {
   generateRetestButtonEl.disabled = false;
 }
 
+
+/* ============================================================
+   CONNECTION CHECK
+   ============================================================ */
 function setStatus(state, message) {
   statusTextEl.dataset.state = state;
   statusTextEl.textContent = message;
@@ -190,13 +376,13 @@ function setStatus(state, message) {
 
 async function handleCheckConnection() {
   checkButtonEl.disabled = true;
-  setStatus("checking", "Checking backend connection...");
+  setStatus("checking", "Checking…");
 
   try {
     const data = await checkBackendHealth();
     setStatus(
       "connected",
-      `Connected: ${data.app_name} (API ${data.api_version}), status "${data.status}".`
+      `Connected: ${data.app_name} (API ${data.api_version})`
     );
   } catch (error) {
     setStatus(
@@ -208,6 +394,10 @@ async function handleCheckConnection() {
   }
 }
 
+
+/* ============================================================
+   NOTES — Messages & Utility
+   ============================================================ */
 function setNotesMessage(state, message) {
   notesMessageEl.dataset.state = state;
   notesMessageEl.textContent = message;
@@ -226,6 +416,10 @@ function updateNotesUtilityButtons() {
   generateQuizButtonEl.disabled = !hasGeneratedNotes || isGeneratingQuiz;
 }
 
+
+/* ============================================================
+   NOTES — Payload
+   ============================================================ */
 function buildNotesPayload() {
   return {
     source_text: sourceTextEl.value.trim(),
@@ -248,6 +442,10 @@ function validateNotesPayload(payload) {
   return "";
 }
 
+
+/* ============================================================
+   NOTES — DOM Rendering Helpers
+   ============================================================ */
 function appendTextElement(parent, tagName, text, className) {
   if (!text) {
     return null;
@@ -315,6 +513,10 @@ function appendDefinitions(parent, definitions) {
   parent.appendChild(list);
 }
 
+
+/* ============================================================
+   NOTES — Copy/Export Formatting
+   ============================================================ */
 function formatListForCopy(title, items) {
   const lines = [`${title}:`];
 
@@ -394,32 +596,47 @@ function formatNotesResponseAsPlainText(response) {
   return sections.join("\n").trim();
 }
 
+
+/* ============================================================
+   NOTES — Empty State
+   ============================================================ */
 function renderNotesEmptyState() {
   notesMetaEl.replaceChildren();
   notesContentEl.replaceChildren();
   const actions = document.getElementById("notes-actions");
   if (actions) actions.hidden = true;
-  
-  appendTextElement(notesContentEl, "h3", "No notes generated yet.");
-  appendTextElement(notesContentEl, "p", "Generate AI notes from your uploaded PDF or pasted text.");
-  
+
+  const wrapper = document.createElement("div");
+  wrapper.className = "empty-state";
+
+  wrapper.innerHTML = `
+    <div class="empty-state__icon">📝</div>
+    <div class="empty-state__title">No notes generated yet</div>
+    <div class="empty-state__description">Generate AI notes from your uploaded PDF or pasted text to get started.</div>
+  `;
+
   const btn = document.createElement("button");
   btn.type = "button";
   btn.textContent = "Generate Notes";
-  btn.className = "empty-state-btn";
-  btn.style.marginTop = "20px";
+  btn.className = "btn-primary";
   btn.addEventListener("click", () => {
     if (generateNotesButtonEl) generateNotesButtonEl.click();
   });
-  notesContentEl.appendChild(btn);
+  wrapper.appendChild(btn);
+  notesContentEl.appendChild(wrapper);
 }
 
+
+/* ============================================================
+   NOTES — Render Response
+   ============================================================ */
 function renderNotesResponse(response, themeClass = "notes-theme-plain") {
   notesMetaEl.replaceChildren();
   notesContentEl.replaceChildren();
 
   notesContentEl.className = "";
   notesContentEl.classList.add(themeClass);
+  notesContentEl.classList.add("fade-in");
 
   const actions = document.getElementById("notes-actions");
   if (actions) actions.hidden = false;
@@ -455,6 +672,10 @@ function renderNotesResponse(response, themeClass = "notes-theme-plain") {
   appendMarkdownContent(notesContentEl, notes.one_minute_revision, "section-content");
 }
 
+
+/* ============================================================
+   NOTES — Generate Handler
+   ============================================================ */
 async function handleGenerateNotes(event) {
   event.preventDefault();
 
@@ -467,39 +688,77 @@ async function handleGenerateNotes(event) {
 
   if (validationMessage) {
     setNotesMessage("error", validationMessage);
+    showToast(validationMessage, "error");
     return;
   }
 
   isGeneratingNotes = true;
   generateNotesButtonEl.disabled = true;
-  setNotesMessage("loading", "Generating notes...");
+  setNotesMessage("loading", "Generating notes…");
+
+  // Show staged loading in the workspace
+  learningWorkspaceEl.hidden = false;
+  switchWorkspaceTab('notes');
+  const actions = document.getElementById("notes-actions");
+  if (actions) actions.hidden = true;
+  notesMetaEl.replaceChildren();
+  notesContentEl.replaceChildren();
+
+  const loader = createStagedLoader(notesContentEl, LOADING_STAGES);
+  createSkeletonLoader(notesContentEl);
 
   const selectedTheme = document.getElementById("notes-theme") ? document.getElementById("notes-theme").value : "notes-theme-plain";
 
   try {
     const response = await generateNotes(payload);
+    loader.stop();
     latestNotesResponse = response;
     renderNotesResponse(response, selectedTheme);
     updateNotesUtilityButtons();
     setNotesMessage("success", "Notes generated successfully.");
-    learningWorkspaceEl.hidden = false;
-    switchWorkspaceTab('notes');
+    showToast("Notes generated successfully!", "success");
+    if (newSessionBtn) newSessionBtn.hidden = false;
   } catch (error) {
-    setNotesMessage("error", error.message || "Could not generate notes.");
+    loader.stop();
+    notesContentEl.replaceChildren();
+
+    const errorMsg = error.message || "Could not generate notes.";
+    setNotesMessage("error", errorMsg);
+    showToast("Failed to generate notes. Please try again.", "error");
+
+    // Show a retry-able error state
+    const wrapper = document.createElement("div");
+    wrapper.className = "empty-state";
+    wrapper.innerHTML = `
+      <div class="empty-state__icon">⚠️</div>
+      <div class="empty-state__title">Generation failed</div>
+      <div class="empty-state__description">${errorMsg}</div>
+    `;
+    const retryBtn = document.createElement("button");
+    retryBtn.type = "button";
+    retryBtn.textContent = "Retry";
+    retryBtn.className = "btn-primary";
+    retryBtn.addEventListener("click", () => notesFormEl.requestSubmit());
+    wrapper.appendChild(retryBtn);
+    notesContentEl.appendChild(wrapper);
   } finally {
     isGeneratingNotes = false;
     generateNotesButtonEl.disabled = false;
   }
 }
 
+
+/* ============================================================
+   NOTES — Copy & Export
+   ============================================================ */
 async function handleCopyNotes() {
   if (!latestNotesResponse) {
-    setNotesUtilityMessage("error", "Generate notes before copying.");
+    showToast("Generate notes before copying.", "error");
     return;
   }
 
   if (!navigator.clipboard || !navigator.clipboard.writeText) {
-    setNotesUtilityMessage("error", "Clipboard access is not available in this browser.");
+    showToast("Clipboard access is not available in this browser.", "error");
     return;
   }
 
@@ -507,9 +766,10 @@ async function handleCopyNotes() {
     await navigator.clipboard.writeText(
       formatNotesResponseAsPlainText(latestNotesResponse)
     );
-    setNotesUtilityMessage("success", "Notes copied.");
+    showToast("Notes copied to clipboard.", "success");
+    setNotesUtilityMessage("success", "Copied!");
   } catch (error) {
-    setNotesUtilityMessage("error", "Could not copy notes.");
+    showToast("Could not copy notes.", "error");
   }
 }
 
@@ -520,23 +780,20 @@ async function handleExportPdf() {
 
   isExportingPdf = true;
   updateNotesUtilityButtons();
-  setNotesUtilityMessage("loading", "Exporting PDF...");
+  showToast("Generating PDF…", "info");
 
   try {
-    // Format the date for the filename: MindCraftAI_Notes_<YYYY-MM-DD>.pdf
     const dateStr = new Date().toISOString().split('T')[0];
     const filename = `MindCraftAI_Notes_${dateStr}.pdf`;
-    
+
     const element = document.getElementById("notes-content");
     const htmlContent = element.innerHTML;
-    
+
     const themeSelect = document.getElementById("notes-theme");
     const themeClass = themeSelect ? themeSelect.value : "notes-theme-plain";
-    
-    // Call the backend Playwright PDF generator
+
     const pdfBlob = await exportNotesPdf(htmlContent, themeClass);
-    
-    // Trigger download
+
     const url = URL.createObjectURL(pdfBlob);
     const a = document.createElement("a");
     a.href = url;
@@ -546,8 +803,10 @@ async function handleExportPdf() {
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
 
-    setNotesUtilityMessage("success", "PDF export complete.");
+    showToast("PDF exported successfully!", "success");
+    setNotesUtilityMessage("success", "PDF exported.");
   } catch (error) {
+    showToast(error.message || "Could not export PDF.", "error");
     setNotesUtilityMessage("error", error.message || "Could not export PDF.");
   } finally {
     isExportingPdf = false;
@@ -555,6 +814,10 @@ async function handleExportPdf() {
   }
 }
 
+
+/* ============================================================
+   FLASHCARDS
+   ============================================================ */
 function setFlashcardsMessage(state, message) {
   flashcardsMessageEl.dataset.state = state;
   flashcardsMessageEl.textContent = message;
@@ -576,19 +839,38 @@ function renderFlashcardsEmptyState() {
 
   if (controls) controls.hidden = true;
   flashcardFlipButtonEl.hidden = true;
-  flashcardFrontEl.textContent = "No flashcards generated yet.";
-  flashcardBackEl.textContent = "";
-  flashcardBackEl.hidden = true;
-  
+
+  const flashcardCardEl = document.getElementById("flashcard-card");
+  const existingEmpty = flashcardCardEl.querySelectorAll(".empty-state");
+  existingEmpty.forEach(el => el.remove());
+
+  if (flashcardFrontEl) {
+    flashcardFrontEl.style.display = "none";
+    flashcardFrontEl.textContent = "";
+  }
+  if (flashcardBackEl) {
+    flashcardBackEl.style.display = "none";
+    flashcardBackEl.textContent = "";
+  }
+
+  const wrapper = document.createElement("div");
+  wrapper.className = "empty-state";
+  wrapper.innerHTML = `
+    <div class="empty-state__icon">🃏</div>
+    <div class="empty-state__title">No flashcards yet</div>
+    <div class="empty-state__description">Generate notes first, then create flashcards for active recall.</div>
+  `;
+
   const btn = document.createElement("button");
   btn.id = "empty-flashcards-btn";
   btn.type = "button";
   btn.textContent = "Generate Flashcards";
-  btn.style.marginTop = "20px";
+  btn.className = "btn-primary";
   btn.addEventListener("click", () => {
     if (generateFlashcardsButtonEl) generateFlashcardsButtonEl.click();
   });
-  document.getElementById("flashcard-card").appendChild(btn);
+  wrapper.appendChild(btn);
+  flashcardCardEl.appendChild(wrapper);
 }
 
 function renderFlashcardsResponse(response) {
@@ -596,6 +878,17 @@ function renderFlashcardsResponse(response) {
   const controls = document.getElementById("flashcard-controls");
   const existingBtn = document.getElementById("empty-flashcards-btn");
   if (existingBtn) existingBtn.remove();
+
+  // Remove empty state wrapper if present
+  const flashcardCardEl = document.getElementById("flashcard-card");
+  const emptyState = flashcardCardEl.querySelector(".empty-state");
+  if (emptyState) emptyState.remove();
+
+  // Restore front/back display
+  const frontEl = document.getElementById("flashcard-front");
+  const backEl = document.getElementById("flashcard-back");
+  if (frontEl) frontEl.style.display = "";
+  if (backEl) backEl.style.display = "";
 
   if (controls) controls.hidden = false;
   flashcardFlipButtonEl.hidden = false;
@@ -667,22 +960,49 @@ async function handleGenerateFlashcards() {
 
   isGeneratingFlashcards = true;
   generateFlashcardsButtonEl.disabled = true;
-  setFlashcardsMessage("loading", "Generating flashcards...");
+  setFlashcardsMessage("loading", "Generating flashcards…");
+
+  // Show staged loading
+  learningWorkspaceEl.hidden = false;
+  switchWorkspaceTab('flashcards');
+  const flashcardCardEl = document.getElementById("flashcard-card");
+  const controls = document.getElementById("flashcard-controls");
+  if (controls) controls.hidden = true;
+  flashcardFlipButtonEl.hidden = true;
+
+  const emptyState = flashcardCardEl.querySelector(".empty-state");
+  if (emptyState) emptyState.remove();
+  flashcardFrontEl.style.display = "none";
+  flashcardBackEl.style.display = "none";
+
+  const loader = createStagedLoader(flashcardCardEl, FLASHCARD_LOADING_STAGES);
 
   try {
-    const response = await generateFlashcards(latestNotesResponse);
+    const flashcardCountEl = document.getElementById("flashcard-count");
+    const flashcardDifficultyEl = document.getElementById("flashcard-difficulty");
+    const count = parseInt(flashcardCountEl ? flashcardCountEl.value : "10", 10);
+    const difficulty = flashcardDifficultyEl ? flashcardDifficultyEl.value : "medium";
+
+    const response = await generateFlashcards(latestNotesResponse, count, difficulty);
+    loader.stop();
     renderFlashcardsResponse(response);
     setFlashcardsMessage("success", "Flashcards generated successfully.");
-    learningWorkspaceEl.hidden = false;
-    switchWorkspaceTab('flashcards');
+    showToast("Flashcards generated!", "success");
   } catch (error) {
+    loader.stop();
     setFlashcardsMessage("error", error.message || "Could not generate flashcards.");
+    showToast("Failed to generate flashcards.", "error");
+    renderFlashcardsEmptyState();
   } finally {
     isGeneratingFlashcards = false;
     updateNotesUtilityButtons();
   }
 }
 
+
+/* ============================================================
+   QUIZ
+   ============================================================ */
 function setQuizMessage(state, message) {
   quizMessageEl.dataset.state = state;
   quizMessageEl.textContent = message;
@@ -845,9 +1165,52 @@ function renderQuizEmptyState() {
   quizQuestionStates = [];
   if (quizControlsEl) quizControlsEl.hidden = true;
   if (quizCardEl) quizCardEl.hidden = false;
-  
-  quizQuestionEl.textContent = "No quiz generated yet.";
-  quizOptionsEl.replaceChildren();
+
+  const existingEmpty = quizCardEl.querySelectorAll(".empty-state");
+  existingEmpty.forEach(el => el.remove());
+
+  const qEl = document.getElementById("quiz-question");
+  const oEl = document.getElementById("quiz-options");
+  const sBtn = document.getElementById("quiz-submit-btn");
+  const fbEl = document.getElementById("quiz-feedback");
+
+  if (qEl) {
+    qEl.textContent = "";
+    qEl.style.display = "none";
+  }
+  if (oEl) {
+    oEl.replaceChildren();
+    oEl.style.display = "none";
+  }
+  if (sBtn) {
+    sBtn.style.display = "none";
+    sBtn.disabled = true;
+  }
+  if (fbEl) {
+    fbEl.textContent = "";
+    fbEl.dataset.state = "idle";
+    fbEl.style.display = "none";
+  }
+
+  const wrapper = document.createElement("div");
+  wrapper.className = "empty-state";
+  wrapper.innerHTML = `
+    <div class="empty-state__icon">❓</div>
+    <div class="empty-state__title">No quiz yet</div>
+    <div class="empty-state__description">Generate notes first, then test your understanding with a quiz.</div>
+  `;
+
+  const btn = document.createElement("button");
+  btn.id = "empty-quiz-btn";
+  btn.type = "button";
+  btn.textContent = "Generate Quiz";
+  btn.className = "btn-primary";
+  btn.addEventListener("click", () => {
+     if (generateQuizButtonEl) generateQuizButtonEl.click();
+  });
+  wrapper.appendChild(btn);
+  quizCardEl.appendChild(wrapper);
+
   quizProgressEl.textContent = "0 / 0";
   quizScoreEl.textContent = "";
   quizSummaryEl.hidden = true;
@@ -859,24 +1222,28 @@ function renderQuizEmptyState() {
   quizWeakConceptsEl.replaceChildren();
   teachWeakTopicsButtonEl.hidden = true;
   generateRetestButtonEl.hidden = true;
-
-  const btn = document.createElement("button");
-  btn.id = "empty-quiz-btn";
-  btn.type = "button";
-  btn.textContent = "Generate Quiz";
-  btn.style.marginTop = "20px";
-  btn.addEventListener("click", () => {
-     if (generateQuizButtonEl) generateQuizButtonEl.click();
-  });
-  if (quizCardEl) quizCardEl.appendChild(btn);
 }
 
 function renderQuizResponse(response) {
   latestQuizResponse = response;
-  document.getElementById("quiz-heading").textContent = currentQuizMode === "retest" ? "Retest: Weak Concepts" : "Original Quiz";
+  document.getElementById("quiz-heading").textContent = currentQuizMode === "retest" ? "Retest: Weak Concepts" : "Quiz";
 
   const existingBtn = document.getElementById("empty-quiz-btn");
   if (existingBtn) existingBtn.remove();
+
+  // Remove empty state wrapper if present
+  const emptyState = quizCardEl.querySelector(".empty-state");
+  if (emptyState) emptyState.remove();
+
+  // Restore quiz elements display
+  const qEl = document.getElementById("quiz-question");
+  const oEl = document.getElementById("quiz-options");
+  const sBtn = document.getElementById("quiz-submit-btn");
+  const fbEl = document.getElementById("quiz-feedback");
+  if (qEl) qEl.style.display = "";
+  if (oEl) oEl.style.display = "";
+  if (sBtn) sBtn.style.display = "";
+  if (fbEl) fbEl.style.display = "";
 
   resetQuizView();
   updateQuizView();
@@ -917,7 +1284,7 @@ function updateQuizView() {
         }
       }
     }
-    
+
     if (hasSkipped) {
       quizFirstUnansweredBtn.hidden = false;
     } else {
@@ -940,38 +1307,50 @@ function updateQuizView() {
 
   const question = questions[quizIndex];
   const questionState = quizQuestionStates[quizIndex];
-  quizQuestionEl.textContent = question.question;
-  quizOptionsEl.replaceChildren();
-  question.options.forEach((option) => {
-    const button = document.createElement("button");
-    button.type = "button";
-    button.className = "quiz-option-btn";
-    button.textContent = option;
-    button.disabled = Boolean(questionState?.isSubmitted);
 
-    if (questionState?.isSubmitted) {
-      button.classList.toggle("selected", questionState.submittedAnswer === option);
-      button.classList.toggle("correct", question.correct_answer === option);
-      button.classList.toggle("incorrect", questionState.submittedAnswer === option && !questionState.isCorrect);
-    } else {
-      button.classList.toggle("selected", questionState?.selectedAnswer === option);
-    }
+  // Get the actual question element (may have been recreated)
+  const activeQuizQuestion = document.getElementById("quiz-question");
+  const activeQuizOptions = document.getElementById("quiz-options");
+  const activeQuizSubmit = document.getElementById("quiz-submit-btn");
+  const activeQuizFeedback = document.getElementById("quiz-feedback");
 
-    button.addEventListener("click", () => {
+  if (activeQuizQuestion) activeQuizQuestion.textContent = question.question;
+  if (activeQuizOptions) {
+    activeQuizOptions.replaceChildren();
+    question.options.forEach((option) => {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "quiz-option-btn";
+      button.textContent = option;
+      button.disabled = Boolean(questionState?.isSubmitted);
+
       if (questionState?.isSubmitted) {
-        return;
+        button.classList.toggle("selected", questionState.submittedAnswer === option);
+        button.classList.toggle("correct", question.correct_answer === option);
+        button.classList.toggle("incorrect", questionState.submittedAnswer === option && !questionState.isCorrect);
+      } else {
+        button.classList.toggle("selected", questionState?.selectedAnswer === option);
       }
 
-      questionState.selectedAnswer = option;
-      Array.from(quizOptionsEl.children).forEach((child) => {
-        child.classList.toggle("selected", child.textContent === option);
+      button.addEventListener("click", () => {
+        if (questionState?.isSubmitted) {
+          return;
+        }
+
+        questionState.selectedAnswer = option;
+        Array.from(activeQuizOptions.children).forEach((child) => {
+          child.classList.toggle("selected", child.textContent === option);
+        });
+        if (activeQuizSubmit) activeQuizSubmit.disabled = false;
+        if (activeQuizFeedback) {
+          activeQuizFeedback.textContent = "";
+          activeQuizFeedback.dataset.state = "idle";
+        }
       });
-      quizSubmitButtonEl.disabled = false;
-      quizFeedbackEl.textContent = "";
-      quizFeedbackEl.dataset.state = "idle";
+      activeQuizOptions.appendChild(button);
     });
-    quizOptionsEl.appendChild(button);
-  });
+  }
+
   quizProgressEl.textContent = `${quizIndex + 1} / ${total}`;
   quizPrevButtonEl.disabled = quizIndex === 0;
   quizNextButtonEl.disabled = quizIndex >= total - 1;
@@ -982,13 +1361,17 @@ function updateQuizView() {
     const feedback = questionState.isCorrect
       ? `Correct! ${explanation}`
       : `Incorrect. The correct answer is "${question.correct_answer}". ${explanation}`;
-    quizFeedbackEl.dataset.state = questionState.isCorrect ? "success" : "error";
-    quizFeedbackEl.textContent = feedback;
-    quizSubmitButtonEl.disabled = true;
+    if (activeQuizFeedback) {
+      activeQuizFeedback.dataset.state = questionState.isCorrect ? "success" : "error";
+      activeQuizFeedback.textContent = feedback;
+    }
+    if (activeQuizSubmit) activeQuizSubmit.disabled = true;
   } else {
-    quizFeedbackEl.textContent = "";
-    quizFeedbackEl.dataset.state = "idle";
-    quizSubmitButtonEl.disabled = !questionState?.selectedAnswer;
+    if (activeQuizFeedback) {
+      activeQuizFeedback.textContent = "";
+      activeQuizFeedback.dataset.state = "idle";
+    }
+    if (activeQuizSubmit) activeQuizSubmit.disabled = !questionState?.selectedAnswer;
   }
 
   updateQuizSummary();
@@ -1056,10 +1439,37 @@ async function handleGenerateQuiz() {
 
   isGeneratingQuiz = true;
   generateQuizButtonEl.disabled = true;
-  setQuizMessage("loading", "Generating quiz...");
+  setQuizMessage("loading", "Generating quiz…");
+
+  // Show staged loading
+  learningWorkspaceEl.hidden = false;
+  switchWorkspaceTab('quiz');
+  if (quizControlsEl) quizControlsEl.hidden = true;
+  quizScoreEl.textContent = "";
+  quizSummaryEl.hidden = true;
+
+  // Remove empty state and show loader
+  const emptyState = quizCardEl.querySelector(".empty-state");
+  if (emptyState) emptyState.remove();
+  const qEl = document.getElementById("quiz-question");
+  const oEl = document.getElementById("quiz-options");
+  const sBtn = document.getElementById("quiz-submit-btn");
+  const fbEl = document.getElementById("quiz-feedback");
+  if (qEl) qEl.style.display = "none";
+  if (oEl) oEl.style.display = "none";
+  if (sBtn) sBtn.style.display = "none";
+  if (fbEl) fbEl.style.display = "none";
+
+  const loader = createStagedLoader(quizCardEl, QUIZ_LOADING_STAGES);
 
   try {
-    const response = await generateQuiz(latestNotesResponse);
+    const quizCountEl = document.getElementById("quiz-count");
+    const quizDifficultyEl = document.getElementById("quiz-difficulty");
+    const count = parseInt(quizCountEl ? quizCountEl.value : "10", 10);
+    const difficulty = quizDifficultyEl ? quizDifficultyEl.value : "medium";
+
+    const response = await generateQuiz(latestNotesResponse, count, difficulty);
+    loader.stop();
 
     if (!response || !Array.isArray(response.questions) || response.questions.length === 0) {
       throw new Error("Received empty or malformed quiz response.");
@@ -1071,10 +1481,12 @@ async function handleGenerateQuiz() {
     syncActiveQuizState();
     renderQuizResponse(response);
     setQuizMessage("success", "Quiz generated successfully.");
-    learningWorkspaceEl.hidden = false;
-    switchWorkspaceTab('quiz');
+    showToast("Quiz generated!", "success");
   } catch (error) {
+    loader.stop();
     setQuizMessage("error", error.message || "Could not generate quiz.");
+    showToast("Failed to generate quiz.", "error");
+    renderQuizEmptyState();
   } finally {
     isGeneratingQuiz = false;
     generateQuizButtonEl.disabled = false;
@@ -1082,26 +1494,43 @@ async function handleGenerateQuiz() {
   }
 }
 
+
+/* ============================================================
+   REVISION
+   ============================================================ */
 function renderRevisionEmptyState() {
   revisionContentEl.replaceChildren();
   const stats = getQuizStats();
+
+  const wrapper = document.createElement("div");
+  wrapper.className = "empty-state";
+
   if (stats.total === 0 || stats.submittedCount < stats.total) {
-    appendTextElement(revisionContentEl, "h3", "You haven't completed a quiz yet.");
+    wrapper.innerHTML = `
+      <div class="empty-state__icon">📊</div>
+      <div class="empty-state__title">Complete a quiz first</div>
+      <div class="empty-state__description">Finish a quiz to identify your weak concepts. Then we'll create targeted revision material.</div>
+    `;
     const btn = document.createElement("button");
     btn.type = "button";
     btn.textContent = "Start Quiz";
-    btn.style.marginTop = "20px";
+    btn.className = "btn-primary";
     btn.addEventListener("click", () => {
        switchWorkspaceTab("quiz");
        if (!originalQuizResponse) {
            if (generateQuizButtonEl) generateQuizButtonEl.click();
        }
     });
-    revisionContentEl.appendChild(btn);
+    wrapper.appendChild(btn);
   } else {
-    appendTextElement(revisionContentEl, "h3", "Quiz completed!");
-    appendTextElement(revisionContentEl, "p", "Click 'Teach Me My Weak Topics' in the Quiz tab to generate focused revision.");
+    wrapper.innerHTML = `
+      <div class="empty-state__icon">✅</div>
+      <div class="empty-state__title">Quiz completed!</div>
+      <div class="empty-state__description">Click "Teach Me My Weak Topics" in the Quiz tab to generate focused revision.</div>
+    `;
   }
+
+  revisionContentEl.appendChild(wrapper);
   generateRetestButtonEl.hidden = true;
 }
 
@@ -1113,7 +1542,7 @@ function renderRevisionResponse(response) {
   if (Array.isArray(revision)) {
     revision.forEach(conceptRev => {
        const sec = document.createElement("section");
-       sec.className = "revision-concept-section";
+       sec.className = "revision-concept-section fade-in";
        appendTextElement(sec, "h3", conceptRev.concept);
        appendTextElement(sec, "p", conceptRev.explanation);
        appendTextElement(sec, "h4", "Example");
@@ -1147,7 +1576,7 @@ async function handleTeachWeakTopics() {
   if (!latestNotesResponse || weakConcepts.length === 0 || isGeneratingRevision) {
     return;
   }
-  
+
   if (latestRevisionResponse !== null) {
     learningWorkspaceEl.hidden = false;
     switchWorkspaceTab('revision');
@@ -1158,11 +1587,13 @@ async function handleTeachWeakTopics() {
   teachWeakTopicsButtonEl.disabled = true;
   revisionOutputEl.hidden = false;
   revisionMessageEl.dataset.state = "loading";
-  revisionMessageEl.textContent = "Generating focused revision...";
-  revisionContentEl.replaceChildren();
+  revisionMessageEl.textContent = "Generating focused revision…";
   generateRetestButtonEl.hidden = true;
   learningWorkspaceEl.hidden = false;
   switchWorkspaceTab('revision');
+  revisionContentEl.replaceChildren();
+
+  const loader = createStagedLoader(revisionContentEl, REVISION_LOADING_STAGES);
 
   try {
     const payload = {
@@ -1172,21 +1603,29 @@ async function handleTeachWeakTopics() {
     };
 
     const response = await generateRevision(payload);
+    loader.stop();
     revisionMessageEl.dataset.state = "success";
     revisionMessageEl.textContent = "Revision generated successfully.";
-    
+    showToast("Revision material ready!", "success");
+
     renderRevisionResponse(response);
     learningWorkspaceEl.hidden = false;
     switchWorkspaceTab('revision');
   } catch (error) {
+    loader.stop();
     revisionMessageEl.dataset.state = "error";
     revisionMessageEl.textContent = error.message || "Could not generate revision.";
+    showToast("Failed to generate revision.", "error");
     teachWeakTopicsButtonEl.disabled = false;
   } finally {
     isGeneratingRevision = false;
   }
 }
 
+
+/* ============================================================
+   RETEST
+   ============================================================ */
 async function handleGenerateRetest() {
   if (!latestNotesResponse || !latestRevisionResponse || isGeneratingRetest) {
     return;
@@ -1194,7 +1633,10 @@ async function handleGenerateRetest() {
 
   isGeneratingRetest = true;
   generateRetestButtonEl.disabled = true;
-  setQuizMessage("loading", "Generating retest...");
+  setQuizMessage("loading", "Generating retest…");
+
+  learningWorkspaceEl.hidden = false;
+  switchWorkspaceTab('quiz');
 
   try {
     const originalQuestions = originalQuizResponse.questions.map(q => q.question);
@@ -1219,17 +1661,23 @@ async function handleGenerateRetest() {
     generateRetestButtonEl.hidden = true;
     renderQuizResponse(response);
     setQuizMessage("success", "Retest generated successfully.");
+    showToast("Retest generated! Test your weak concepts.", "success");
 
     quizOutputEl.scrollIntoView({ behavior: 'smooth' });
 
   } catch (error) {
     setQuizMessage("error", error.message || "Could not generate retest.");
+    showToast("Failed to generate retest.", "error");
     generateRetestButtonEl.disabled = false;
   } finally {
     isGeneratingRetest = false;
   }
 }
 
+
+/* ============================================================
+   PDF EXTRACTION
+   ============================================================ */
 function setPdfMessage(state, message) {
   pdfMessageEl.dataset.state = state;
   pdfMessageEl.textContent = message;
@@ -1244,6 +1692,7 @@ async function handleExtractPdf() {
 
   if (!file) {
     setPdfMessage("error", "Choose a PDF file first.");
+    showToast("Please select a PDF file.", "error");
     return;
   }
 
@@ -1259,23 +1708,64 @@ async function handleExtractPdf() {
 
   isExtractingPdf = true;
   extractPdfButtonEl.disabled = true;
-  setPdfMessage("loading", "Extracting text from PDF...");
+  setPdfMessage("loading", "Extracting text from PDF…");
 
   try {
     const result = await extractPdfText(file);
     sourceTextEl.value = result.extracted_text;
     setPdfMessage(
       "success",
-      `Extracted ${result.character_count} characters from ${result.page_count} page(s). Review the text below, then click Generate Notes.`
+      `Extracted ${result.character_count} characters from ${result.page_count} page(s).`
     );
+    showToast(`PDF extracted: ${result.character_count} characters from ${result.page_count} page(s).`, "success");
   } catch (error) {
     setPdfMessage("error", error.message || "Could not extract text from that PDF.");
+    showToast("PDF extraction failed.", "error");
   } finally {
     isExtractingPdf = false;
     extractPdfButtonEl.disabled = false;
   }
 }
 
+
+/* ============================================================
+   NEW SESSION
+   ============================================================ */
+function handleNewSession() {
+  if (!confirm("Start a new session? This will clear all generated content.")) return;
+
+  latestNotesResponse = null;
+  latestFlashcardsResponse = null;
+  latestQuizResponse = null;
+  originalQuizResponse = null;
+  originalQuizQuestionStates = [];
+  clearAdaptiveCycleState();
+  flashcardIndex = 0;
+  flashcardsAreFlipped = false;
+  quizIndex = 0;
+  quizQuestionStates = [];
+
+  learningWorkspaceEl.hidden = true;
+  if (newSessionBtn) newSessionBtn.hidden = true;
+  sourceTextEl.value = "";
+  pdfFileEl.value = "";
+  setNotesMessage("idle", "");
+  setPdfMessage("idle", "");
+  updateNotesUtilityButtons();
+
+  renderNotesEmptyState();
+  renderFlashcardsEmptyState();
+  renderQuizEmptyState();
+  renderRevisionEmptyState();
+
+  showToast("Session cleared. Ready for a new document.", "info");
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+
+/* ============================================================
+   EVENT LISTENERS
+   ============================================================ */
 checkButtonEl.addEventListener("click", handleCheckConnection);
 notesFormEl.addEventListener("submit", handleGenerateNotes);
 extractPdfButtonEl.addEventListener("click", handleExtractPdf);
@@ -1288,11 +1778,22 @@ flashcardNextButtonEl.addEventListener("click", handleFlashcardNext);
 flashcardFlipButtonEl.addEventListener("click", handleFlashcardFlip);
 quizPrevButtonEl.addEventListener("click", handleQuizPrevious);
 quizNextButtonEl.addEventListener("click", handleQuizNext);
-quizSubmitButtonEl.addEventListener("click", handleQuizSubmit);
+
+// Quiz submit — must re-query the element since it may be recreated
+document.addEventListener("click", (e) => {
+  if (e.target && e.target.id === "quiz-submit-btn") {
+    handleQuizSubmit();
+  }
+});
+
 quizRestartButtonEl.addEventListener("click", handleQuizRestart);
 teachWeakTopicsButtonEl.addEventListener("click", handleTeachWeakTopics);
 generateRetestButtonEl.addEventListener("click", handleGenerateRetest);
 updateNotesUtilityButtons();
+
+if (newSessionBtn) {
+  newSessionBtn.addEventListener("click", handleNewSession);
+}
 
 // Tab Click Listeners
 tabNotesBtn.addEventListener("click", () => switchWorkspaceTab("notes"));
@@ -1342,5 +1843,29 @@ if (quizFirstUnansweredBtn) {
       quizIndex = idx;
       updateQuizView();
     }
+  });
+}
+
+// Spacebar flashcard flip
+document.addEventListener("keydown", (e) => {
+  if (activeWorkspaceTab === "flashcards" && e.key === " " && e.target === document.body) {
+    e.preventDefault();
+    handleFlashcardFlip();
+  }
+});
+
+// PDF upload drop zone visual feedback
+const pdfUploadEl = document.getElementById("pdf-upload");
+if (pdfUploadEl) {
+  pdfUploadEl.addEventListener("dragover", (e) => {
+    e.preventDefault();
+    pdfUploadEl.classList.add("drag-over");
+  });
+  pdfUploadEl.addEventListener("dragleave", () => {
+    pdfUploadEl.classList.remove("drag-over");
+  });
+  pdfUploadEl.addEventListener("drop", (e) => {
+    e.preventDefault();
+    pdfUploadEl.classList.remove("drag-over");
   });
 }

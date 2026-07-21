@@ -16,15 +16,18 @@ class Settings(BaseSettings):
     # Environment: "development" or "production"
     environment: str = "development"
 
-    # Local frontend origin, used for CORS in development.
-    # Default matches the built-in static server documented in the README:
-    #   python -m http.server 5500 --directory frontend
-    frontend_origin: str = "http://127.0.0.1:5500"
+    # Comma-separated list of allowed CORS origins.
+    # Supports localhost development and Vercel deployments.
+    cors_allowed_origins: str = "http://127.0.0.1:5500,http://localhost:5500,http://127.0.0.1:8080,http://localhost:8080,http://127.0.0.1:3000,http://localhost:3000"
+
+    @property
+    def get_cors_origins(self) -> list[str]:
+        return [origin.strip() for origin in self.cors_allowed_origins.split(",") if origin.strip()]
 
     # Gemini settings. The API key is optional at startup so /health keeps
     # working in local environments before notes generation is configured.
     gemini_api_key: str | None = None
-    gemini_model: str = "gemini-2.5-flash"
+    gemini_model: str = "gemini-3.1-flash-lite"
     gemini_timeout_seconds: float = 30.0
 
     # DeepSeek settings
