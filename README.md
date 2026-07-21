@@ -64,7 +64,7 @@ MindCraft AI uses a **stateless, monolithic architecture** optimized for AI gene
 
 - **Frontend:** Vanilla HTML5, CSS3 (CSS Variables for theming), and ES6 JavaScript. No bundlers, no complex state management libraries—just pure performance.
 - **Backend:** Python 3.11+ running **FastAPI**. Heavily utilizes **Pydantic** for rigid validation of LLM outputs.
-- **AI Integration:** Google Gemini (`gemini-3.1-flash-lite`) integrated via the official GenAI SDK, using Strict JSON Schemas for deterministic responses.
+- **AI Integration:** Google Gemini (`gemini-2.5-flash`) integrated via the official GenAI SDK, using Strict JSON Schemas for deterministic responses.
 - **PDF Generation:** Playwright (Headless Chromium) for high-fidelity HTML-to-PDF rendering.
 
 *For a deep dive into the system design, see [ARCHITECTURE.md](ARCHITECTURE.md).*
