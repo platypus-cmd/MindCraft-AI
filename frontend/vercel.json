@@ -2,7 +2,7 @@
   "rewrites": [
     {
       "source": "/api/(.*)",
-      "destination": "https://mindcraft-backend.onrender.com/api/$1"
+      "destination": "https://mindcraft-ai-backend.onrender.com/api/$1"
     }
   ]
 }
