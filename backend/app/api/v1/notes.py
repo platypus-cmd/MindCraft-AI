@@ -58,7 +58,11 @@ async def export_notes_pdf(request: PdfExportRequest) -> Response:
             },
         )
     except Exception as exc:
+        import traceback
+        traceback.print_exc()
+        print("PDF EXPORT ERROR:", repr(exc))
+        print("PDF EXPORT STRING:", str(exc))
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to generate PDF. The document generation service may be unavailable or misconfigured."
+            detail=f"PDF Export Failed: {repr(exc)}"
         ) from exc
